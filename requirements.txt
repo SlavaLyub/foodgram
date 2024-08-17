@@ -1,0 +1,6 @@
+Django==3.2
+djoser
+djangorestframework
+djangorestframework-simplejwt
+drf-yasg
+Pillow
