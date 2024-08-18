@@ -6,6 +6,7 @@ from base64 import b64decode
 from io import BytesIO
 from PIL import Image
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
+from foodgram.models import Subscription
 
 User = get_user_model()
 
@@ -25,6 +26,8 @@ class UserCreateSerializer(BaseUserCreateSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """Для получения списка пользователей."""
+    is_subscribed = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -33,8 +36,15 @@ class UserSerializer(serializers.ModelSerializer):
             'username',
             'first_name',
             'last_name',
-            'avatar'
-        ]   # TODO: Добавить в модель поле 'is_subscribed'
+            'avatar',
+            'is_subscribed'
+        ]
+
+    def get_is_subscribed(self, obj):
+        user = self.context['request'].user
+        if user.is_anonymous:
+            return False
+        return Subscription.objects.filter(user=user, subscribed_to=obj).exists()
 
 
 class Base64ImageField(serializers.ImageField):
