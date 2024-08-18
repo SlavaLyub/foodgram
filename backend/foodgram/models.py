@@ -27,5 +27,5 @@ class User(AbstractUser):
         default=None
     )
 
-    def __str__(self):
+    def __str__(self):  # TODO Добавить сортировку по дате
         return self.username
