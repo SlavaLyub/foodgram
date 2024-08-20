@@ -1,11 +1,12 @@
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.response import Response
+from rest_framework import filters
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
 from rest_framework.generics import (
     RetrieveUpdateDestroyAPIView,
     get_object_or_404,
     ListAPIView,
-    ListCreateAPIView,
+    # ListCreateAPIView,
     ValidationError
 )
 from rest_framework.viewsets import GenericViewSet
@@ -13,13 +14,15 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
-from .filters import RecipeFilter
+# from .filters import RecipeFilter
 from .serializers import (
     AvatarSerializer,
     SubscriptionSerializer,
-    RecipeReadSerializer,
-    RecipeCreateSerializer,
+    RecipeListOrRetrieveSerializer,
+    RecipePostOrPatchSerializer,
     SubscribeSerializer
+    # RecipeReadSerializer,
+    # RecipeCreateSerializer,
 )
 from foodgram.models import Subscription, Recipe
 
@@ -93,32 +96,19 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
             return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
 
 
-class RecipeListView(ListCreateAPIView):
+class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = RecipeFilter
+    # serializer_class = RecipeListOrRetrieveSerializer
 
+    # В зависимости от действия (list или retrieve) используем разные сериализаторы
     def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return RecipeCreateSerializer
-        return RecipeReadSerializer
+        if self.action in ['list', 'retrieve']:
+            return RecipeListOrRetrieveSerializer
+        elif self.action in ['create', 'update', 'partial_update']:
+            return RecipePostOrPatchSerializer
 
-
-class RecipeDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Recipe.objects.all()
-    serializer_class = RecipeCreateSerializer
-
-    def patch(self, request, *args, **kwargs):
-        partial = True
-        serializer = self.get_serializer(self.get_object(), data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
-
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def perform_destroy(self, instance):
-        instance.delete()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = [
+        'author', 'tags',
+        # 'is_favorited', 'is_in_shopping_cart'
+    ]

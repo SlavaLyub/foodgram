@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import User, Subscription, Recipe, Tag, Ingredient, RecipeIngredient, Favorite, ShoppingCart
+from .models import User, Subscription, Recipe, Tag, Ingredient, RecipeIngredient
+
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -7,44 +8,34 @@ class UserAdmin(admin.ModelAdmin):
     search_fields = ('username', 'email')
     list_filter = ('is_staff', 'is_superuser')
 
+
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ('user', 'subscribed_to', 'created_at')
     search_fields = ('user__username', 'subscribed_to__username')
     list_filter = ('created_at',)
 
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('title', 'author', 'cooking_time')
-    search_fields = ('title', 'author__username')
-    list_filter = ('author', 'tags')
+    list_display = ('id', 'author', 'name', 'cooking_time')
+    search_fields = ('name', 'author__username')
+    list_filter = ('tags', 'author')
+    raw_id_fields = ('author',)
+    filter_horizontal = ('tags',)
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
-    search_fields = ('name',)
-    prepopulated_fields = {'slug': ('name',)}
+    list_display = ('id', 'name', 'slug')
+    search_fields = ('name', 'slug')
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'unit')
+    list_display = ('id', 'name', 'unit')
     search_fields = ('name',)
 
 @admin.register(RecipeIngredient)
 class RecipeIngredientAdmin(admin.ModelAdmin):
-    list_display = ('recipe', 'ingredient', 'quantity', 'unit')
-    search_fields = ('recipe__title', 'ingredient__name')
-    list_filter = ('recipe', 'ingredient')
-
-@admin.register(Favorite)
-class FavoriteAdmin(admin.ModelAdmin):
-    list_display = ('user', 'recipe', 'created_at')
-    search_fields = ('user__username', 'recipe__title')
-    list_filter = ('created_at',)
-
-@admin.register(ShoppingCart)
-class ShoppingCartAdmin(admin.ModelAdmin):
-    list_display = ('user', 'recipe', 'created_at')
-    search_fields = ('user__username', 'recipe__title')
-    list_filter = ('created_at',)
-
+    list_display = ('id', 'recipe', 'ingredient', 'amount')
+    search_fields = ('recipe__name', 'ingredient__name')
+    raw_id_fields = ('recipe', 'ingredient')
