@@ -105,7 +105,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 6,  # Количество записей на одной странице
+    'PAGE_SIZE': 6,
 }
 
 DJOSER = {
@@ -125,3 +125,5 @@ PATTERN_NAME = r'^[\w.@+-]+\Z'
 MAX_LENGTH_TITLE = 255
 MAX_LENGTH_IAG = 100
 MAX_LENGTH_UNIT = 50
+MAX_LENGTH_AMOUNT = 10
+MAX_LENGTH_SHORT_URL = 6

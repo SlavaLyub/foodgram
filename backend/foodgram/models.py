@@ -1,7 +1,11 @@
+import random
+import string
+
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
-from django.conf import settings
+
 from .validators import validate_username
 
 
@@ -20,6 +24,10 @@ class User(AbstractUser):
     first_name = models.CharField(
         max_length=settings.MAX_LENGTH_NAME,
         verbose_name='First Name'
+    )
+    last_name = models.CharField(
+        max_length=settings.MAX_LENGTH_NAME,
+        verbose_name='Last Name'
     )
     avatar = models.ImageField(
         upload_to='users/avatars',
@@ -45,16 +53,16 @@ class Subscription(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(max_length=50, unique=True)
+    name = models.CharField(max_length=settings.MAX_LENGTH_UNIT, unique=True)
+    slug = models.SlugField(max_length=settings.MAX_LENGTH_UNIT, unique=True)
 
     def __str__(self):
         return self.name
 
 
 class Ingredient(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    unit = models.CharField(max_length=50)
+    name = models.CharField(max_length=settings.MAX_LENGTH_IAG, unique=True)
+    unit = models.CharField(max_length=settings.MAX_LENGTH_UNIT)
 
     def __str__(self):
         return self.name
@@ -62,7 +70,7 @@ class Ingredient(models.Model):
 
 class Recipe(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recipes')
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=settings.MAX_LENGTH_IAG)
     image = models.ImageField(upload_to='recipes/images/')
     text = models.TextField()
     cooking_time = models.PositiveIntegerField()
@@ -80,7 +88,7 @@ class Recipe(models.Model):
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='ingredients')
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name='recipe_ingredients')
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=settings.MAX_LENGTH_AMOUNT, decimal_places=2)
 
     class Meta:
         unique_together = ('recipe', 'ingredient')
@@ -89,3 +97,41 @@ class RecipeIngredient(models.Model):
 
     def __str__(self):
         return f'{self.amount} {self.ingredient.unit} of {self.ingredient.name} in {self.recipe.name}'
+
+
+def generate_short_url(length=6):
+    characters = string.ascii_letters + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
+
+
+class ShortenedRecipeURL(models.Model):
+    recipe = models.OneToOneField(Recipe, on_delete=models.CASCADE, related_name='shortened_url')
+    short_code = models.CharField(max_length=settings.MAX_LENGTH_SHORT_URL, unique=True, default=generate_short_url)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.short_code} -> {self.recipe.name}'
+
+
+class FavoriteRecipe(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_recipes')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='favorited_by')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'recipe')  # Уникальная пара User-Recipe
+
+    def __str__(self):
+        return f'{self.user.username} -> {self.recipe.name}'
+
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shopping_cart_recipes')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='shopping_cart_by')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'recipe')  # Уникальная пара User-Recipe
+
+    def __str__(self):
+        return f'{self.user.username} -> {self.recipe.name}'
