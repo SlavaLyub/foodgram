@@ -65,7 +65,7 @@ class Base64ImageField(serializers.ImageField):
 
 
 class AvatarSerializer(serializers.ModelSerializer):
-    avatar = Base64ImageField(required=False, allow_null=True)
+    avatar = Base64ImageField(required=True, allow_null=True)
 
     class Meta:
         model = User
@@ -126,18 +126,20 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(source='ingredient.name')
-    unit = serializers.CharField(source='ingredient.unit')
+    name = serializers.CharField(source="ingredient.name")
+    measurement_unit = serializers.CharField(source="ingredient.unit")
 
     class Meta:
         model = RecipeIngredient
-        fields = ['id', 'name', 'unit', 'amount']
+        fields = ["id", "name", "measurement_unit", "amount"]
 
 
 class GetOrRetriveIngredientSerializer(serializers.ModelSerializer):
+    measurement_unit = serializers.CharField(source="unit")
+
     class Meta:
         model = Ingredient
-        fields = ['id', 'name', 'unit']
+        fields = ["id", "name", "measurement_unit"]
 
 
 class RecipeListOrRetrieveSerializer(serializers.ModelSerializer):

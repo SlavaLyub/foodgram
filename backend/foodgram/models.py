@@ -99,14 +99,14 @@ class RecipeIngredient(models.Model):
         return f'{self.amount} {self.ingredient.unit} of {self.ingredient.name} in {self.recipe.name}'
 
 
-def generate_short_url(length=6):
+def generate_short_code(length=6):
     characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for _ in range(length))
 
 
 class ShortenedRecipeURL(models.Model):
     recipe = models.OneToOneField(Recipe, on_delete=models.CASCADE, related_name='shortened_url')
-    short_code = models.CharField(max_length=settings.MAX_LENGTH_SHORT_URL, unique=True, default=generate_short_url)
+    short_code = models.CharField(max_length=settings.MAX_LENGTH_SHORT_URL, unique=True, default=generate_short_code)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

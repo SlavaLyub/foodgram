@@ -4,7 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, status, viewsets, permissions
 from rest_framework.generics import (ListAPIView, RetrieveUpdateDestroyAPIView,
                                      ValidationError, get_object_or_404)
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
@@ -39,6 +39,15 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
             serializer.save()
             return Response({'status': 'Avatar updated'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            user: User = get_object_or_404(User, pk=self.request.user.id)
+            user.avatar = None
+            user.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SubscriptionsListView(ListAPIView):
@@ -94,9 +103,8 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    # serializer_class = RecipeListOrRetrieveSerializer
+    allowed_methods = ['GET', 'POST', 'PUT']
 
-    # В зависимости от действия (list или retrieve) используем разные сериализаторы
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
             return RecipeListOrRetrieveSerializer
@@ -130,11 +138,15 @@ def redirect_to_original(request, short_code):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = GetOrRetriveIngredientSerializer
+    pagination_class = None
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^name',)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    pagination_class = None
 
 
 class FavoriteView(ModelViewSet):

@@ -115,6 +115,11 @@ DJOSER = {
         'user_create': 'api.serializers.UserCreateSerializer',
         'current_user': 'api.serializers.UserSerializer',
     },
+    # 'PERMISSIONS': {
+    #     'user_create': ['rest_framework.permissions.AllowAny'],  # Позволяет неаутентифицированным пользователям регистрироваться
+    #     'user': ['rest_framework.permissions.AllowAny'],  # Аутентифицированные пользователи могут видеть информацию о пользователе
+    #     'user_delete': ['rest_framework.permissions.IsAuthenticated'],  # Только аутентифицированные пользователи могут удалять себя
+    # },
 }
 
 # Константы
