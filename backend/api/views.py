@@ -55,6 +55,7 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
 
 class SubscriptionsListView(ListAPIView):
     serializer_class = SubscriptionSerializer
+    # pagination_class = LimitPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -108,7 +109,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = RecipeFilterSet
-    filterset_fields = ['author', 'tags']  # 'is_favorited', 'is_in_shopping_cart'
+    filterset_fields = ['author', 'tags', 'is_favorited', 'is_in_shopping_cart']
+    search_fields = ['tags',]
     pagination_class = LimitPagination  # Используем кастомный пагинатор
     permission_classes = [IsAuthorOrReadOnly,]
     # permission_classes = [permissions.AllowAny]
@@ -123,6 +125,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeListOrRetrieveSerializer
         elif self.action in ['create', 'update', 'partial_update']:
             return RecipePostOrPatchSerializer
+
+    def partial_update(self, request, *args, **kwargs):
+        # Retrieve the instance to be updated
+        instance = self.get_object()
+        # Initialize the serializer with the instance and the request data
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        # Perform validation
+        serializer.is_valid(raise_exception=True)
+        # Update the instance with the validated data
+        self.perform_update(serializer)
+        # Return the updated instance in the response
+        return Response(serializer.data)
 
 
 class RecipeLinkView(APIView):

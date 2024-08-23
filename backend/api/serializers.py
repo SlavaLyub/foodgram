@@ -158,15 +158,15 @@ class RecipeListOrRetrieveSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         user = self.context['request'].user
-        if user.is_anonymous:
-            return False
-        return FavoriteRecipe.objects.filter(user=user, recipe=obj).exists()
+        if user.is_authenticated:
+            return FavoriteRecipe.objects.filter(user=user, recipe=obj).exists()
+        return False
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context['request'].user
-        if user.is_anonymous:
-            return False
-        return ShoppingCart.objects.filter(user=user, recipe=obj).exists()
+        if user.is_authenticated:
+            return ShoppingCart.objects.filter(user=user, recipe=obj).exists()
+        return False
 ################################################################
 
 
@@ -204,6 +204,15 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
         return image
 
     def validate(self, data):
+        request = self.context.get("request")
+        # Check for PATCH request and missing `tags` field
+        if request.method == "PATCH" and 'tags' not in data:
+            raise serializers.ValidationError({"tags": "This field is required."})
+        # tags = data.get('tags', [])
+        # tag_ids = [tag.id for tag in tags]
+        # if len(tag_ids) != len(set(tag_ids)):
+        #     raise serializers.ValidationError({"tags": "Duplicate tags are not allowed."})
+            # Check if all tags exist
         # Check if ingredients field is empty
         ingredient = set()
         if not data.get('ingredients'):
