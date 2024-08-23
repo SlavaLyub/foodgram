@@ -103,23 +103,26 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+    ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 6,
+    'PAGE_SIZE': 6,  # Количество записей на одной странице
 }
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'SERIALIZERS': {
         'user': 'api.serializers.UserSerializer',
-        'user_create': 'api.serializers.UserCreateSerializer',
         'current_user': 'api.serializers.UserSerializer',
+        'user_create': 'api.serializers.UserCreateSerializer',
     },
-    # 'PERMISSIONS': {
-    #     'user_create': ['rest_framework.permissions.AllowAny'],  # Позволяет неаутентифицированным пользователям регистрироваться
-    #     'user': ['rest_framework.permissions.AllowAny'],  # Аутентифицированные пользователи могут видеть информацию о пользователе
-    #     'user_delete': ['rest_framework.permissions.IsAuthenticated'],  # Только аутентифицированные пользователи могут удалять себя
-    # },
+    'PERMISSIONS': {
+        'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
+        'current_user': ['djoser.permissions.CurrentUserOrAdmin'],
+        'user_list': ['rest_framework.permissions.AllowAny'],
+    },
 }
 
 # Константы

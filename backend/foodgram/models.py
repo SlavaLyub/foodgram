@@ -88,7 +88,7 @@ class Recipe(models.Model):
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='ingredients')
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name='recipe_ingredients')
-    amount = models.DecimalField(max_digits=settings.MAX_LENGTH_AMOUNT, decimal_places=2)
+    amount = models.IntegerField()
 
     class Meta:
         unique_together = ('recipe', 'ingredient')

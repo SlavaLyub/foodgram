@@ -188,50 +188,114 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = [
-            'tags', 'ingredients', 'author',
-            'name', 'image', 'text', 'cooking_time'
+            'id',
+            'ingredients',
+            'tags',
+            'author',
+            'image',
+            'name',
+            'text',
+            'cooking_time'
         ]
+
+    def validate_image(self, image):
+        if self.context.get("request").method == "POST" and not image:
+            raise serializers.ValidationError('Image must be required')
+        return image
+
+    def validate(self, data):
+        # Check if ingredients field is empty
+        ingredient = set()
+        if not data.get('ingredients'):
+            raise serializers.ValidationError({"ingredients": "Recipe should have at least one ingredient."})
+        for item in data.get('ingredients'):
+            ingredient.add(item['id'])
+            if item['amount'] < 1:
+                raise serializers.ValidationError({"ingredients": "amount should be greater or equal 1."})
+        if len(ingredient) != len(data.get('ingredients')):
+            raise serializers.ValidationError("unique constaiant failed.")
+        return data
 
     def create(self, validated_data):
         # Извлечение данных ингредиентов
-        ingredients_data = validated_data.pop('ingredients')
-        # Проверка на уникальность ингредиентов
-        if len(ingredients_data) != len(set([item['id'] for item in ingredients_data])):
-            raise serializers.ValidationError("Ingredients should be unique.")
-        # Создание рецепта
+        ingredients_data = validated_data.pop("ingredients")
         recipe = super().create(validated_data)
 
         # Создание связей с ингредиентами
         for ingredient_data in ingredients_data:
-            ingredient = ingredient_data.pop('id')  # Получение объекта ингредиента
+            ingredient = ingredient_data.pop("id")  # Получение объекта ингредиента
             RecipeIngredient.objects.create(
                 recipe=recipe,
                 ingredient=ingredient,
-                # amount=ingredient_data['amount']
-                **ingredient_data  # Присвоение остальных полей
+                **ingredient_data,  # Присвоение остальных полей
             )
-
         recipe.refresh_from_db()
         return recipe
 
     def update(self, instance, validated_data):
         # Извлечение данных ингредиентов
-        if validated_data.get('ingredients'):
-            ingredients_data = validated_data.pop('ingredients')
-            # Проверка на уникальность ингредиентов
-            if len(ingredients_data) != len(set([item['id'] for item in ingredients_data])):
-                raise serializers.ValidationError("Ingredients should be unique.")
+        if validated_data.get("ingredients"):
+            ingredients_data = validated_data.pop("ingredients")
 
             for ingredient_data in ingredients_data:
-                ingredient_id = ingredient_data.pop('id')  # Получение id ингредиента
+                ingredient_id = ingredient_data.pop("id")  # Получение id ингредиента
                 recipe_ingredient, _ = RecipeIngredient.objects.update_or_create(
                     recipe=instance,
                     ingredient_id=ingredient_id,
-                    defaults=ingredient_data  # Присвоение остальных полей
+                    defaults=ingredient_data,  # Присвоение остальных полей
                 )
         super().update(instance, validated_data)
 
         return instance
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+        current_user = request.user
+
+        representation['id'] = instance.id
+
+        # Проверка подписки
+        is_subscribed = Subscription.objects.filter(user=current_user, subscribed_to=instance.author).exists()
+        representation['author'] = {
+            "email": instance.author.email,
+            "id": instance.author.id,
+            "username": instance.author.username,
+            "first_name": instance.author.first_name,
+            "last_name": instance.author.last_name,
+            "is_subscribed": is_subscribed,
+            "avatar": instance.author.avatar.url if instance.author.avatar else None
+        }
+
+        # Преобразование тегов
+        representation['tags'] = [
+            {
+                "id": tag.id,
+                "name": tag.name,
+                "slug": tag.slug
+            } for tag in instance.tags.all()
+        ]
+
+        # Преобразование ингредиентов
+        representation['ingredients'] = [
+            {
+                "id": ingredient.ingredient.id,
+                "name": ingredient.ingredient.name,
+                "measurement_unit": ingredient.ingredient.unit,
+                "amount": ingredient.amount
+            } for ingredient in instance.ingredients.all()
+        ]
+
+        # Полный URL изображения
+        representation['image'] = request.build_absolute_uri(instance.image.url)
+
+        # Проверка, находится ли рецепт в избранном
+        representation['is_favorited'] = FavoriteRecipe.objects.filter(user=current_user, recipe=instance).exists()
+
+        # Проверка, находится ли рецепт в корзине
+        representation['is_in_shopping_cart'] = ShoppingCart.objects.filter(user=current_user, recipe=instance).exists()
+
+        return representation
 ################################################################
 
 

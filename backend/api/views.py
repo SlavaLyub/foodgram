@@ -21,6 +21,9 @@ from .serializers import (AvatarSerializer, FavoriteSerializer,
                           RecipePostOrPatchSerializer, ShoppingCartSerializer,
                           SubscribeSerializer, SubscriptionSerializer,
                           TagSerializer)
+from .filters import IngredientFilter, RecipeFilterSet
+from .pagination import LimitPagination
+from .permission import IsAuthorOrReadOnly
 
 User = get_user_model()
 
@@ -103,7 +106,17 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    allowed_methods = ['GET', 'POST', 'PUT']
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_class = RecipeFilterSet
+    filterset_fields = ['author', 'tags']  # 'is_favorited', 'is_in_shopping_cart'
+    pagination_class = LimitPagination  # Используем кастомный пагинатор
+    permission_classes = [IsAuthorOrReadOnly,]
+    # permission_classes = [permissions.AllowAny]
+
+    # def get_permissions(self):
+    #     if self.action in ['list', 'retrieve']:
+    #         return [permissions.AllowAny()]  # Возвращаем экземпляр класса AllowAny
+    #     return super().get_permissions()  # Вызываем метод родительского класса
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
@@ -111,14 +124,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         elif self.action in ['create', 'update', 'partial_update']:
             return RecipePostOrPatchSerializer
 
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = [
-        'author', 'tags',
-        # 'is_favorited', 'is_in_shopping_cart'
-    ]
-
 
 class RecipeLinkView(APIView):
+    permission_classes = [permissions.AllowAny]
     def get(self, request, id):
         try:
             recipe = Recipe.objects.get(pk=id)
@@ -138,15 +146,18 @@ def redirect_to_original(request, short_code):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = GetOrRetriveIngredientSerializer
+    filterset_class = IngredientFilter
     pagination_class = None
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('^name',)
+    permission_classes = [permissions.AllowAny]
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
+    permission_classes = [permissions.AllowAny]
+    # filter_backends = [DjangoFilterBackend]
+    # filterset_class = RecipeFilterSet
 
 
 class FavoriteView(ModelViewSet):

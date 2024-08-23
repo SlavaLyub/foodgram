@@ -8,6 +8,7 @@ from .views import (DownloadShoppingCartView, FavoriteView, IngredientViewSet,
                     RecipeLinkView, RecipeViewSet, ShoppingCartView,
                     SubscribeCreateDestroyView, SubscriptionsListView,
                     TagViewSet, UserAvatarUpdateView)
+from .permission import ReadOnly
 
 User = get_user_model()
 
@@ -28,7 +29,7 @@ urlpatterns = [
     path('recipes/<int:id>/shopping_cart/', ShoppingCartView.as_view(SUBSCRIBE), name='shopping_cart'),
     path('auth/', include('djoser.urls.authtoken')),
     path('', include(router.urls)),
-    path('users/<int:pk>/', RetrieveAPIView.as_view(queryset=User.objects.all(), serializer_class=UserSerializer), name='user_detail'),
+    path('users/<int:pk>/', RetrieveAPIView.as_view(queryset=User.objects.all(), serializer_class=UserSerializer, permission_classes=[ReadOnly]), name='user_detail'),
     path('users/subscriptions/', SubscriptionsListView.as_view(), name='subscriptions'),
     path('users/<int:pk>/subscribe/', SubscribeCreateDestroyView.as_view(SUBSCRIBE), name='subscribe'),
     path('', include('djoser.urls')),
