@@ -75,11 +75,13 @@ class Recipe(models.Model):
     text = models.TextField()
     cooking_time = models.PositiveIntegerField()
     tags = models.ManyToManyField(Tag, related_name='recipes')
+    date_created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('author', 'name')
         verbose_name = "Recipe"
         verbose_name_plural = "Recipes"
+        ordering = ['-date_created']
 
     def __str__(self):
         return self.name

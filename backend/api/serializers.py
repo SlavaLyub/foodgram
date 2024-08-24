@@ -170,6 +170,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return Subscription.objects.filter(user=user, subscribed_to=obj.subscribed_to).exists()
 
     def get_recipes(self, obj):
+        recipes_limit = self.context.get('recipes_limit', None)
         recipes = Recipe.objects.filter(author=obj.subscribed_to)
         return [
             {
@@ -178,7 +179,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
                 "image": recipe.image.url,
                 "cooking_time": recipe.cooking_time,
             }
-            for recipe in recipes
+            for recipe in recipes[:recipes_limit]
         ]
 
     def get_recipes_count(self, obj):
@@ -187,6 +188,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         repr = super().to_representation(instance)
         repr["id"] = instance.subscribed_to.id
+        ###
+        recipes_limit = self.context.get('recipes_limit', None)
+        ####
         return repr
 
     def to_internal_value(self, data):
