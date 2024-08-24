@@ -77,44 +77,133 @@ class AvatarSerializer(serializers.ModelSerializer):
         return instance
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
-    """Для получения списка пользователей."""
+class SubList(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = User
-        fields = [
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'avatar',
-            'is_subscribed',
-            'recipes',
-            'recipes_count'
-        ]
-
-    def get_is_subscribed(self, obj):
-        user = self.context['request'].user
-        if user.is_anonymous:
-            return False
-        return Subscription.objects.filter(user=user, subscribed_to=obj).exists()
-
-    def get_recipes(self, obj):
-        return Recipe.objects.filter(author=self.context['request'].user)
-
-    def get_recipes_count(self, obj):
-        return len(self.get_recipes(obj))
-
-
-class SubscribeSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source="subscribed_to.username")
+    first_name = serializers.ReadOnlyField(source="subscribed_to.first_name")
+    last_name = serializers.ReadOnlyField(source="subscribed_to.last_name")
+    avatar = serializers.SerializerMethodField()  # Changed to SerializerMethodField
+    email = serializers.ReadOnlyField(source="subscribed_to.email")
     class Meta:
         model = Subscription
-        fields = ['user', 'subscribed_to', 'created_at']
-        read_only_fields = ['user', 'subscribed_to', 'created_at']
+        fields = [
+            "email",
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "is_subscribed",
+            "recipes",
+            "recipes_count",
+            "avatar",
+        ]
+
+    def get_avatar(self, obj):  # New method to handle avatar safely
+        if obj.subscribed_to.avatar:
+            return obj.subscribed_to.avatar.url
+        return None
+
+    def get_is_subscribed(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        return Subscription.objects.filter(user=user, subscribed_to=obj.subscribed_to).exists()
+
+    def get_recipes(self, obj):
+        recipes = Recipe.objects.filter(author=obj.subscribed_to)
+        return [
+            {
+                "id": recipe.id,
+                "name": recipe.name,
+                "image": recipe.image.url,
+                "cooking_time": recipe.cooking_time,
+            }
+            for recipe in recipes
+        ]
+
+    def get_recipes_count(self, obj):
+        return Recipe.objects.filter(author=obj.subscribed_to).count()
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+    username = serializers.ReadOnlyField(source="subscribed_to.username")
+    first_name = serializers.ReadOnlyField(source="subscribed_to.first_name")
+    last_name = serializers.ReadOnlyField(source="subscribed_to.last_name")
+    avatar = serializers.SerializerMethodField()  # Changed to SerializerMethodField
+    email = serializers.ReadOnlyField(source="subscribed_to.email")
+    subscribed_to = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), write_only=True)
+
+    class Meta:
+        model = Subscription
+        fields = [
+            "email",
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "is_subscribed",
+            "recipes",
+            "recipes_count",
+            "subscribed_to",
+            "avatar",
+        ]
+
+    def validate(self, data):
+        if data['user'] == data['subscribed_to']:
+            raise serializers.ValidationError({"subscription": "You can't subscribe on you're self."})
+        return super().validate(data)
+
+    def get_avatar(self, obj):  # New method to handle avatar safely
+        if obj.subscribed_to.avatar:
+            return obj.subscribed_to.avatar.url
+        return None
+
+    def get_is_subscribed(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        return Subscription.objects.filter(user=user, subscribed_to=obj.subscribed_to).exists()
+
+    def get_recipes(self, obj):
+        recipes = Recipe.objects.filter(author=obj.subscribed_to)
+        return [
+            {
+                "id": recipe.id,
+                "name": recipe.name,
+                "image": recipe.image.url,
+                "cooking_time": recipe.cooking_time,
+            }
+            for recipe in recipes
+        ]
+
+    def get_recipes_count(self, obj):
+        return Recipe.objects.filter(author=obj.subscribed_to).count()
+
+    def to_representation(self, instance):
+        repr = super().to_representation(instance)
+        repr["id"] = instance.subscribed_to.id
+        return repr
+
+    def to_internal_value(self, data):
+        repr = super().to_internal_value(data)
+        repr['subscribed_to'] = data['subscribed_to']
+        repr['user'] = data['user']
+        return repr
+
+    def create(self, validated_data):
+        subscribed_to = User.objects.get(pk=validated_data['subscribed_to'])
+        user = User.objects.get(pk=validated_data['user'])
+
+        # Check for existing subscription
+        if Subscription.objects.filter(user=user, subscribed_to=subscribed_to).exists():
+            raise serializers.ValidationError("You are already subscribed to this user.")
+
+        return Subscription.objects.create(user=user, subscribed_to=subscribed_to)
 
 
 ################################################################

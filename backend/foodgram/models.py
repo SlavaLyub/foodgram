@@ -43,7 +43,7 @@ class User(AbstractUser):
 class Subscription(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
     subscribed_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscribers')
-    created_at = models.DateTimeField(default=timezone.now)
+    # created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         unique_together = ('user', 'subscribed_to')

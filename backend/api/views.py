@@ -19,10 +19,10 @@ from .serializers import (AvatarSerializer, FavoriteSerializer,
                           GetOrRetriveIngredientSerializer,
                           RecipeLinkSerializer, RecipeListOrRetrieveSerializer,
                           RecipePostOrPatchSerializer, ShoppingCartSerializer,
-                          SubscribeSerializer, SubscriptionSerializer,
+                          SubList, SubscriptionSerializer,
                           TagSerializer)
 from .filters import IngredientFilter, RecipeFilterSet
-from .pagination import LimitPagination
+from .pagination import LimitPagination, SubLimitPagination
 from .permission import IsAuthorOrReadOnly
 
 User = get_user_model()
@@ -54,55 +54,46 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
 
 
 class SubscriptionsListView(ListAPIView):
-    serializer_class = SubscriptionSerializer
-    # pagination_class = LimitPagination
+    serializer_class = SubList
+    pagination_class = SubLimitPagination
 
     def get_queryset(self):
         user = self.request.user
         subscriptions = Subscription.objects.filter(user=user)
-        subscribed_users = User.objects.filter(id__in=subscriptions.values('subscribed_to'))
-        return subscribed_users if subscriptions.exists() else User.objects.none()
+        subscribed_users = User.objects.filter(
+            id__in=subscriptions.values("subscribed_to")
+        )
+        return subscriptions if subscriptions.exists() else Subscription.objects.none()
 
 
 class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
-    serializer_class = SubscribeSerializer
+    serializer_class = SubscriptionSerializer
 
     def get_object(self):
-        pk = self.kwargs.get('pk')
+        pk = self.kwargs.get("pk")
         subscribed_to = get_object_or_404(User, pk=pk)
-
-        if self.request.user == subscribed_to:
-            raise PermissionDenied("You cannot perform actions on your own account.")
-        return get_object_or_404(Subscription, user=self.request.user, subscribed_to=subscribed_to)
+        return get_object_or_404(
+            Subscription, user=self.request.user, subscribed_to=subscribed_to
+        )
 
     def perform_create(self, serializer):
-        pk = self.kwargs.get('pk')
-        subscribed_to = get_object_or_404(User, pk=pk)
-        if self.request.user == subscribed_to:
-            raise ValidationError("You cannot subscribe to yourself.")
-
-        if Subscription.objects.filter(user=self.request.user, subscribed_to=subscribed_to).exists():
-            raise ValidationError("You are already subscribed to this user.")
-
-        serializer.save(user=self.request.user, subscribed_to=subscribed_to)
+        serializer.save()
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data={})  # Empty data since `subscribed_to` is set internally
+        pk = self.kwargs.get("pk")
+        subscribed_to = get_object_or_404(User, pk=pk)
+
+        # Initialize serializer with the primary key of subscribed_to
+        serializer = self.get_serializer(data={"subscribed_to": subscribed_to.id, "user": request.user.id})
+
         serializer.is_valid(raise_exception=True)
+        # Try saving and handling potential errors
         try:
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
-            subscribed_to_user = serializer.instance.subscribed_to
-            user_detail_serializer = SubscriptionSerializer(subscribed_to_user, context={'request': request})
-            data = user_detail_serializer.data
-
-            return Response(data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except ValidationError as e:
             return Response({"errors": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except PermissionDenied as e:
-            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
-        except Http404 as e:
-            return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
