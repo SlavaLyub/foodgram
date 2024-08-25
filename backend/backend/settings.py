@@ -150,6 +150,3 @@ MAX_LENGTH_IAG = 100
 MAX_LENGTH_UNIT = 50
 MAX_LENGTH_AMOUNT = 10
 MAX_LENGTH_SHORT_URL = 6
-MESSAGE = {
-    'VALUE_MIN_MESSAGE': 'Value should be greater than 1 or equal.'
-}

@@ -1,5 +1,4 @@
 from base64 import b64decode
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
@@ -85,10 +84,10 @@ class SubList(serializers.ModelSerializer):
     def get_is_subscribed(self, obj):
         user = self.context["request"].user
         return (
-                not user.is_anonymous
-                and Subscription.objects.filter(
-                        user=user,
-                        subscribed_to=obj.subscribed_to).exists())
+            not user.is_anonymous
+            and Subscription.objects.filter(
+                user=user,
+                subscribed_to=obj.subscribed_to).exists())
 
     def get_recipes(self, obj):
         recipes = Recipe.objects.filter(author=obj.subscribed_to)
@@ -144,7 +143,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"subscription": "You are already subscribed to this user."}
             )
-        # Добавляем пользователя в validated_data
         data['user'] = user
         return data
 

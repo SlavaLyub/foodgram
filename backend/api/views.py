@@ -133,7 +133,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                         'is_favorited', 'is_in_shopping_cart'
                         ]
     pagination_class = LimitPagination
-    permission_classes = [IsAuthorOrReadOnly,]
+    permission_classes = [IsAuthorOrReadOnly, ]
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
