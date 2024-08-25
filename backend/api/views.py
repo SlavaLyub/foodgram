@@ -1,6 +1,5 @@
 from django import urls
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
 from django.http import FileResponse
 from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
@@ -22,7 +21,7 @@ from .serializers import (AvatarSerializer, FavoriteSerializer,
                           SubList, SubscriptionSerializer,
                           TagSerializer)
 from .filters import IngredientFilter, RecipeFilterSet
-from .pagination import LimitPagination, SubLimitPagination
+from .pagination import LimitPagination
 from .permission import IsAuthorOrReadOnly
 
 User = get_user_model()
@@ -55,7 +54,7 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
 
 class SubscriptionsListView(ListAPIView):
     serializer_class = SubList
-    pagination_class = SubLimitPagination
+    pagination_class = LimitPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -161,7 +160,6 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class FavoriteView(ModelViewSet):
     queryset = FavoriteRecipe.objects.all()
     serializer_class = FavoriteSerializer
-    http_method_names = ['post', 'delete']
 
     def create(self, request, *args, **kwargs):
         recipe_id = self.kwargs.get('id')

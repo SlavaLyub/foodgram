@@ -22,7 +22,6 @@ router = DefaultRouter()
 router.register(r'recipes', RecipeViewSet, basename='recipe')
 router.register(r'ingredients', IngredientViewSet, basename='ingredient')
 router.register(r'tags', TagViewSet, basename='tag')
-# router.register(r'recipes/(?P<id>\d+)/favorite', FavoriteView, basename='favorite')
 
 urlpatterns = [
     path('recipes/<int:id>/favorite/', FavoriteView.as_view(SUBSCRIBE), name='favorite'),
@@ -30,11 +29,14 @@ urlpatterns = [
     path('recipes/<int:id>/shopping_cart/', ShoppingCartView.as_view(SUBSCRIBE), name='shopping_cart'),
     path('auth/', include('djoser.urls.authtoken')),
     path('', include(router.urls)),
-    path('users/<int:pk>/', RetrieveAPIView.as_view(queryset=User.objects.all(), serializer_class=UserSerializer, permission_classes=[ReadOnly]), name='user_detail'),
+    path('users/<int:pk>/', RetrieveAPIView.as_view(queryset=User.objects.all(),
+                                                    serializer_class=UserSerializer,
+                                                    permission_classes=[ReadOnly]),
+         name='user_detail'
+    ),
     path('users/subscriptions/', SubscriptionsListView.as_view(), name='subscriptions'),
     path('users/<int:pk>/subscribe/', SubscribeCreateDestroyView.as_view(SUBSCRIBE), name='subscribe'),
     path('', include('djoser.urls')),
     path('recipes/<int:id>/get-link/', RecipeLinkView.as_view(), name='get-recipe-link'),
     path('users/me/avatar/', UserAvatarUpdateView.as_view(), name='user_avatar_update'),
-
 ]
