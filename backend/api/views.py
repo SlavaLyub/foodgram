@@ -35,11 +35,15 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
 
     def patch(self, request, *args, **kwargs):
         user = self.get_object()
-        serializer = self.get_serializer(user, data=request.data, partial=True)
-
+        serializer = self.get_serializer(user,
+                                         data=request.data,
+                                         partial=True
+                                         )
         if serializer.is_valid():
             serializer.save()
-            return Response({'status': 'Avatar updated'}, status=status.HTTP_200_OK)
+            return Response({'status': 'Avatar updated'},
+                            status=status.HTTP_200_OK
+                            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, *args, **kwargs):
@@ -59,10 +63,16 @@ class SubscriptionsListView(ListAPIView):
     def get_queryset(self):
         user = self.request.user
         subscriptions = Subscription.objects.filter(user=user)
-        return subscriptions if subscriptions.exists() else Subscription.objects.none()
+        return (
+            subscriptions if
+            subscriptions.exists() else
+            Subscription.objects.none()
+        )
 
 
-class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
+class SubscribeCreateDestroyView(CreateModelMixin,
+                                 DestroyModelMixin,
+                                 GenericViewSet):
     serializer_class = SubscriptionSerializer
 
     def get_object(self):
@@ -78,14 +88,22 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
     def create(self, request, *args, **kwargs):
         pk = self.kwargs.get("pk")
         subscribed_to = get_object_or_404(User, pk=pk)
-        serializer = self.get_serializer(data={"subscribed_to": subscribed_to.id, "user": request.user.id})
+        serializer = self.get_serializer(
+            data={"subscribed_to": subscribed_to.id,
+                  "user": request.user.id}
+        )
         serializer.is_valid(raise_exception=True)
         try:
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(serializer.data,
+                            status=status.HTTP_201_CREATED,
+                            headers=headers
+                            )
         except ValidationError as e:
-            return Response({"errors": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"errors": str(e)},
+                            status=status.HTTP_400_BAD_REQUEST
+                            )
 
     def destroy(self, request, *args, **kwargs):
         user = request.user
@@ -93,10 +111,16 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
         try:
             author = User.objects.get(pk=subscribed_to_id)
         except User.DoesNotExist:
-            return Response({'error': 'Author not found.'}, status=status.HTTP_404_NOT_FOUND)
-        subscription = Subscription.objects.filter(user=user, subscribed_to=author).first()
+            return Response({'error': 'Author not found.'},
+                            status=status.HTTP_404_NOT_FOUND
+                            )
+        subscription = Subscription.objects.filter(user=user,
+                                                   subscribed_to=author
+                                                   ).first()
         if not subscription:
-            return Response({'error': 'Subscription does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Subscription does not exist.'},
+                            status=status.HTTP_400_BAD_REQUEST
+                            )
         subscription.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -105,7 +129,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = RecipeFilterSet
-    filterset_fields = ['author', 'tags', 'is_favorited', 'is_in_shopping_cart']
+    filterset_fields = ['author', 'tags',
+                        'is_favorited', 'is_in_shopping_cart'
+                        ]
     pagination_class = LimitPagination
     permission_classes = [IsAuthorOrReadOnly,]
 
@@ -117,7 +143,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer = self.get_serializer(instance,
+                                         data=request.data, partial=True
+                                         )
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
@@ -131,15 +159,21 @@ class RecipeLinkView(APIView):
             recipe = Recipe.objects.get(pk=id)
             if not hasattr(recipe, 'shortened_url'):
                 ShortenedRecipeURL.objects.create(recipe=recipe)
-            serializer = RecipeLinkSerializer(recipe, context={'request': request})
+            serializer = RecipeLinkSerializer(recipe,
+                                              context={'request': request}
+                                              )
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Recipe.DoesNotExist:
-            return Response({"detail": "Recipe not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Recipe not found."},
+                            status=status.HTTP_404_NOT_FOUND
+                            )
 
 
 def redirect_to_original(request, short_code):
     url = get_object_or_404(ShortenedRecipeURL, short_code=short_code)
-    return redirect(urls.reverse('api:recipe-detail', kwargs={'pk': url.recipe.id}))
+    return redirect(urls.reverse('api:recipe-detail',
+                                 kwargs={'pk': url.recipe.id})
+                    )
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -173,14 +207,20 @@ class FavoriteView(ModelViewSet):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        recipe_id = self.kwargs.get('id')  # Get recipe_id from URL
-        recipe = get_object_or_404(Recipe, id=recipe_id)  # Retrieve the Recipe instance
+        recipe_id = self.kwargs.get('id')
+        recipe = get_object_or_404(Recipe, id=recipe_id)
         try:
-            favorite_recipe = FavoriteRecipe.objects.get(recipe=recipe, user=self.request.user)
+            favorite_recipe = FavoriteRecipe.objects.get(
+                recipe=recipe,
+                user=self.request.user
+            )
             favorite_recipe.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except FavoriteRecipe.DoesNotExist:
-            return Response({"detail": "This recipe is not in your favorites."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "This recipe is not in your favorites."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
@@ -191,23 +231,32 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
     def create(self, request, *args, **kwargs):
         recipe_id = self.kwargs.get('id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
-        if ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+        if ShoppingCart.objects.filter(user=request.user,
+                                       recipe=recipe
+                                       ).exists():
             return Response(
                 {'error': 'Recipe already in shopping cart.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        serializer = self.get_serializer(data={'user': request.user.id, 'recipe': recipe.id})
+        serializer = self.get_serializer(data={'user': request.user.id,
+                                               'recipe': recipe.id}
+                                         )
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user, recipe=recipe)
 
         headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(serializer.data,
+                        status=status.HTTP_201_CREATED,
+                        headers=headers
+                        )
 
     def destroy(self, request, *args, **kwargs):
         recipe_id = self.kwargs.get('id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
 
-        shopping_cart_item = ShoppingCart.objects.filter(recipe=recipe, user=request.user).first()
+        shopping_cart_item = ShoppingCart.objects.filter(
+            recipe=recipe, user=request.user
+        ).first()
         if shopping_cart_item:
             shopping_cart_item.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -239,5 +288,6 @@ class DownloadShoppingCartView(APIView):
         for name, details in ingredients.items():
             content += f"{name}: {details['amount']} {details['unit']}\n"
         response = FileResponse(content, content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="shopping_cart.txt"'
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_cart.txt"')
         return response

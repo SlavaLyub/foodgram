@@ -114,7 +114,10 @@ class RecipeIngredient(models.Model):
         verbose_name_plural = "Recipe Ingredients"
 
     def __str__(self):
-        return f'{self.amount} {self.ingredient.unit} of {self.ingredient.name} in {self.recipe.name}'
+        return (
+            f'{self.amount} {self.ingredient.unit} of '
+            f'{self.ingredient.name} in {self.recipe.name}'
+        )
 
 
 def generate_short_code(length=6):

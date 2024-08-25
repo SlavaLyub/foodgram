@@ -8,8 +8,11 @@ from api.views import redirect_to_original
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
-    path('s/<str:short_code>/', redirect_to_original, name='short_link_redirect'),
+    path('s/<str:short_code>/',
+         redirect_to_original,
+         name='short_link_redirect'),
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.MEDIA_URL,
+                          document_root=settings.MEDIA_ROOT)

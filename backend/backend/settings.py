@@ -59,13 +59,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-if os.getenv("USE_SQLITE") == 'True':
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+#  if os.getenv("USE_SQLITE") == 'True':
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
 # else:
 #     DATABASES = {
 #         'default': {
@@ -150,3 +150,6 @@ MAX_LENGTH_IAG = 100
 MAX_LENGTH_UNIT = 50
 MAX_LENGTH_AMOUNT = 10
 MAX_LENGTH_SHORT_URL = 6
+MESSAGE = {
+    'VALUE_MIN_MESSAGE': 'Value should be greater than 1 or equal.'
+}
