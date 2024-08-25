@@ -22,6 +22,7 @@ router = DefaultRouter()
 router.register(r'recipes', RecipeViewSet, basename='recipe')
 router.register(r'ingredients', IngredientViewSet, basename='ingredient')
 router.register(r'tags', TagViewSet, basename='tag')
+# router.register(r'recipes/(?P<id>\d+)/favorite', FavoriteView, basename='favorite')
 
 urlpatterns = [
     path('recipes/<int:id>/favorite/', FavoriteView.as_view(SUBSCRIBE), name='favorite'),

@@ -1,7 +1,7 @@
 from django import urls
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.http import FileResponse, Http404
+from django.http import FileResponse
 from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets, permissions
@@ -60,9 +60,6 @@ class SubscriptionsListView(ListAPIView):
     def get_queryset(self):
         user = self.request.user
         subscriptions = Subscription.objects.filter(user=user)
-        subscribed_users = User.objects.filter(
-            id__in=subscriptions.values("subscribed_to")
-        )
         return subscriptions if subscriptions.exists() else Subscription.objects.none()
 
 
@@ -82,12 +79,8 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
     def create(self, request, *args, **kwargs):
         pk = self.kwargs.get("pk")
         subscribed_to = get_object_or_404(User, pk=pk)
-
-        # Initialize serializer with the primary key of subscribed_to
         serializer = self.get_serializer(data={"subscribed_to": subscribed_to.id, "user": request.user.id})
-
         serializer.is_valid(raise_exception=True)
-        # Try saving and handling potential errors
         try:
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
@@ -95,21 +88,27 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
         except ValidationError as e:
             return Response({"errors": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        subscribed_to_id = kwargs.get('pk')
+        try:
+            author = User.objects.get(pk=subscribed_to_id)
+        except User.DoesNotExist:
+            return Response({'error': 'Author not found.'}, status=status.HTTP_404_NOT_FOUND)
+        subscription = Subscription.objects.filter(user=user, subscribed_to=author).first()
+        if not subscription:
+            return Response({'error': 'Subscription does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+        subscription.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = RecipeFilterSet
     filterset_fields = ['author', 'tags', 'is_favorited', 'is_in_shopping_cart']
-    search_fields = ['tags',]
-    pagination_class = LimitPagination  # Используем кастомный пагинатор
+    pagination_class = LimitPagination
     permission_classes = [IsAuthorOrReadOnly,]
-    # permission_classes = [permissions.AllowAny]
-
-    # def get_permissions(self):
-    #     if self.action in ['list', 'retrieve']:
-    #         return [permissions.AllowAny()]  # Возвращаем экземпляр класса AllowAny
-    #     return super().get_permissions()  # Вызываем метод родительского класса
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
@@ -118,20 +117,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipePostOrPatchSerializer
 
     def partial_update(self, request, *args, **kwargs):
-        # Retrieve the instance to be updated
         instance = self.get_object()
-        # Initialize the serializer with the instance and the request data
         serializer = self.get_serializer(instance, data=request.data, partial=True)
-        # Perform validation
         serializer.is_valid(raise_exception=True)
-        # Update the instance with the validated data
         self.perform_update(serializer)
-        # Return the updated instance in the response
         return Response(serializer.data)
 
 
 class RecipeLinkView(APIView):
     permission_classes = [permissions.AllowAny]
+
     def get(self, request, id):
         try:
             recipe = Recipe.objects.get(pk=id)
@@ -161,8 +156,6 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TagSerializer
     pagination_class = None
     permission_classes = [permissions.AllowAny]
-    # filter_backends = [DjangoFilterBackend]
-    # filterset_class = RecipeFilterSet
 
 
 class FavoriteView(ModelViewSet):
@@ -171,28 +164,25 @@ class FavoriteView(ModelViewSet):
     http_method_names = ['post', 'delete']
 
     def create(self, request, *args, **kwargs):
-        recipe_id = self.kwargs.get('id')  # Get recipe_id from URL
-        recipe = get_object_or_404(Recipe, id=recipe_id)  # Retrieve the Recipe instance
-
+        recipe_id = self.kwargs.get('id')
+        recipe = get_object_or_404(Recipe, id=recipe_id)
         data = {'user': request.user.id, 'recipe': recipe.id}
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        response_data = serializer.to_representation(serializer.instance)
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         recipe_id = self.kwargs.get('id')  # Get recipe_id from URL
         recipe = get_object_or_404(Recipe, id=recipe_id)  # Retrieve the Recipe instance
-
         try:
             favorite_recipe = FavoriteRecipe.objects.get(recipe=recipe, user=self.request.user)
             favorite_recipe.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except FavoriteRecipe.DoesNotExist:
-            return Response({"detail": "This recipe is not in your favorites."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "This recipe is not in your favorites."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
@@ -203,15 +193,14 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
     def create(self, request, *args, **kwargs):
         recipe_id = self.kwargs.get('id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
-
-        # Поскольку user передается в request и уже есть в контексте, добавим его к данным
-        data = {'user': request.user.id, 'recipe': recipe.id}
-
-        serializer = self.get_serializer(data=data)
+        if ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+            return Response(
+                {'error': 'Recipe already in shopping cart.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer = self.get_serializer(data={'user': request.user.id, 'recipe': recipe.id})
         serializer.is_valid(raise_exception=True)
-
-        # Теперь сохраняем данные, передавая recipe
-        serializer.save(recipe=recipe, user=request.user)
+        serializer.save(user=request.user, recipe=recipe)
 
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -225,18 +214,18 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
             shopping_cart_item.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
-            return Response({"detail": "This recipe is not in your shopping cart."}, status=status.HTTP_404_NOT_FOUND)
+            # Возвращаем статус 400, как ожидается в тестах
+            return Response(
+                {"detail": "Recipe is not in your shopping cart."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class DownloadShoppingCartView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
         shopping_cart = ShoppingCart.objects.filter(user=user)
-
-        # Словарь для суммирования ингредиентов
         ingredients = {}
-
-        # Суммируем ингредиенты
         for item in shopping_cart:
             recipe = item.recipe
             for ingredient in recipe.ingredients.all():
@@ -248,13 +237,9 @@ class DownloadShoppingCartView(APIView):
                     ingredients[name]['amount'] += amount
                 else:
                     ingredients[name] = {'amount': amount, 'unit': unit}
-
-        # Создаем текстовый файл в формате строки
         content = "Shopping Cart Ingredients:\n\n"
         for name, details in ingredients.items():
             content += f"{name}: {details['amount']} {details['unit']}\n"
-
         response = FileResponse(content, content_type='text/plain')
         response['Content-Disposition'] = 'attachment; filename="shopping_cart.txt"'
-
         return response
