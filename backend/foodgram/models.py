@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Q, UniqueConstraint, CheckConstraint
 
 from .validators import validate_name_last_name
 
@@ -54,7 +55,16 @@ class Subscription(models.Model):
                                       )
 
     class Meta:
-        unique_together = ('user', 'subscribed_to')
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'subscribed_to'],
+                name='unique_subscription'
+            ),
+            CheckConstraint(
+                check=~Q(user=models.F('subscribed_to')),
+                name='prevent_self_subscription'
+            )
+        ]
 
     def __str__(self):
         return f'{self.user} subscribed to {self.subscribed_to}'
@@ -77,6 +87,14 @@ class Ingredient(models.Model):
                             unique=True
                             )
     unit = models.CharField(max_length=settings.MAX_LENGTH_UNIT)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['name', 'unit'],
+                name='unique_ingredients'
+            ),
+        ]
 
     def __str__(self):
         return self.name
@@ -113,9 +131,9 @@ class RecipeIngredient(models.Model):
                                )
     ingredient = models.ForeignKey(Ingredient,
                                    on_delete=models.CASCADE,
-                                   related_name='recipe_ingredients'
+                                   related_name='recipe_ingredients+'
                                    )
-    amount = models.IntegerField()
+    amount = models.PositiveSmallIntegerField()
 
     class Meta:
         unique_together = ('recipe', 'ingredient')
