@@ -168,21 +168,6 @@ class RecipeIngredient(models.Model):
         )
 
 
-class ShortenedRecipeURL(models.Model):
-    recipe = models.OneToOneField(Recipe,
-                                  on_delete=models.CASCADE,
-                                  related_name='shortened_url'
-                                  )
-    short_code = models.CharField(max_length=settings.MAX_LENGTH_SHORT_URL,
-                                  unique=True,
-                                  default=generate_short_code
-                                  )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f'{self.short_code} -> {self.recipe.name}'
-
-
 class FavoriteRecipe(models.Model):
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
@@ -195,7 +180,12 @@ class FavoriteRecipe(models.Model):
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'recipe')
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_favorite_recipes'
+            ),
+        ]
 
     def __str__(self):
         return f'{self.user.username} -> {self.recipe.name}'
@@ -213,7 +203,12 @@ class ShoppingCart(models.Model):
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'recipe')
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_shopping_cart'
+            ),
+        ]
 
     def __str__(self):
         return f'{self.user.username} -> {self.recipe.name}'

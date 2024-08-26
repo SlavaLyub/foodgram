@@ -1,6 +1,7 @@
 from django import urls
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
+from django.urls import reverse
 from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets, permissions
@@ -12,7 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from foodgram.models import (FavoriteRecipe, Ingredient, Recipe, ShoppingCart,
-                             ShortenedRecipeURL, Subscription, Tag)
+                             Subscription, Tag, generate_short_code)
 
 from .serializers import (AvatarSerializer, FavoriteSerializer,
                           GetOrRetriveIngredientSerializer,
@@ -70,9 +71,9 @@ class SubscriptionsListView(ListAPIView):
         )
 
 
-class SubscribeCreateDestroyView(CreateModelMixin,
-                                 DestroyModelMixin,
-                                 GenericViewSet):
+class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin,
+                                 GenericViewSet
+                                 ):
     serializer_class = SubscriptionSerializer
 
     def get_object(self):
@@ -157,23 +158,20 @@ class RecipeLinkView(APIView):
     def get(self, request, id):
         try:
             recipe = Recipe.objects.get(pk=id)
-            if not hasattr(recipe, 'shortened_url'):
-                ShortenedRecipeURL.objects.create(recipe=recipe)
-            serializer = RecipeLinkSerializer(recipe,
-                                              context={'request': request}
-                                              )
+            if not recipe.short_url:  # Если короткий URL не установлен
+                recipe.short_url = generate_short_code()
+                recipe.save()  # Сохраняем обновлённый рецепт с коротким URL
+            serializer = RecipeLinkSerializer(recipe, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Recipe.DoesNotExist:
-            return Response({"detail": "Recipe not found."},
-                            status=status.HTTP_404_NOT_FOUND
-                            )
+            return Response({"detail": "Recipe not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 def redirect_to_original(request, short_code):
-    url = get_object_or_404(ShortenedRecipeURL, short_code=short_code)
-    return redirect(urls.reverse('api:recipe-detail',
-                                 kwargs={'pk': url.recipe.id})
-                    )
+    # Ищем рецепт по short_url
+    recipe = get_object_or_404(Recipe, short_url=short_code)
+    # Перенаправляем на детальное представление рецепта
+    return redirect(reverse('api:recipe-detail', kwargs={'pk': recipe.id}))
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
