@@ -4,6 +4,7 @@ import string
 from django.conf import settings
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, UniqueConstraint, CheckConstraint
 
@@ -100,6 +101,16 @@ class Ingredient(models.Model):
         return self.name
 
 
+def generate_short_code():
+    characters = string.ascii_letters + string.digits
+
+    while True:
+        short_code = ''.join(random.choices(characters,
+                                            k=settings.MAX_LENGTH_SHORT_URL))
+        if not Recipe.objects.filter(short_url=short_code).exists():
+            return short_code
+
+
 class Recipe(models.Model):
     author = models.ForeignKey(User,
                                on_delete=models.CASCADE,
@@ -113,6 +124,10 @@ class Recipe(models.Model):
                                   related_name='recipes'
                                   )
     date_created = models.DateTimeField(auto_now_add=True)
+    short_url = models.CharField(max_length=settings.MAX_LENGTH_SHORT_URL,
+                                 unique=True,
+                                 default=generate_short_code
+                                 )
 
     class Meta:
         unique_together = ('author', 'name')
@@ -122,6 +137,12 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        if Recipe.objects.filter(short_url=self.short_url).exclude(
+                pk=self.pk).exists():
+            raise ValidationError(
+                "Короткий URL уже используется. Попробуйте снова сгенерировать его.")
 
 
 class RecipeIngredient(models.Model):
@@ -145,11 +166,6 @@ class RecipeIngredient(models.Model):
             f'{self.amount} {self.ingredient.unit} of '
             f'{self.ingredient.name} in {self.recipe.name}'
         )
-
-
-def generate_short_code(length=6):
-    characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for _ in range(length))
 
 
 class ShortenedRecipeURL(models.Model):
