@@ -287,9 +287,8 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
             if item['amount'] < 1:
                 raise ValidationError(
                     {
-                        "ingredients": (
+                        "ingredients":
                             "Amount value should be greater than 1 or equal."
-                        )
                     }
                 )
         if len(ingredient) != len(data.get('ingredients')):
@@ -297,9 +296,8 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
         if data.get('cooking_time') < 1:
             raise ValidationError(
                 {
-                    "ingredients": (
+                    "ingredients":
                         "Amount value should be greater than 1 or equal."
-                    )
                 }
             )
         return data
