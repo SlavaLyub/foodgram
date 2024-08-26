@@ -5,9 +5,12 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 
-def validate_username(username):
-    if not re.match(settings.PATTERN_NAME, username):
+def validate_name_last_name(value):
+    invalid_chars = re.findall(settings.PATTERN_NAME, value)
+    if invalid_chars:
+        invalid_chars_str = ''.join(invalid_chars)
         raise ValidationError(
-            _('Используются недопустимые символы в имени пользователя.'),
-            params={'value': username},
+            _('The field contains invalid characters: %(invalid_chars)s. '
+              'Only letters, spaces, and hyphens are allowed.'),
+            params={'invalid_chars': invalid_chars_str},
         )

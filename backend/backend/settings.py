@@ -7,7 +7,6 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
-
 DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -144,7 +143,7 @@ DJOSER = {
 MAX_LENGTH_NAME = 150
 MAX_LENGTH_EMAIL = 254
 MAX_LENGTH_PASSWORD = 128
-PATTERN_NAME = r'^[\w.@+-]+\Z'
+PATTERN_NAME = r'[^a-zA-Zа-яА-ЯёЁ\s-]'
 MAX_LENGTH_TITLE = 255
 MAX_LENGTH_IAG = 100
 MAX_LENGTH_UNIT = 50

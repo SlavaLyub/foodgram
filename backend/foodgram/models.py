@@ -2,13 +2,16 @@ import random
 import string
 
 from django.conf import settings
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from .validators import validate_username
+from .validators import validate_name_last_name
 
 
 class User(AbstractUser):
+    username_validator = UnicodeUsernameValidator()
+
     email = models.EmailField(unique=True,
                               max_length=settings.MAX_LENGTH_EMAIL,
                               verbose_name='Email'
@@ -16,13 +19,19 @@ class User(AbstractUser):
     username = models.CharField(max_length=settings.MAX_LENGTH_NAME,
                                 unique=True,
                                 verbose_name='Username',
-                                validators=[validate_username]
+                                validators=[username_validator],
+                                error_messages={
+                                    'unique':
+                                        "A user with that username already exists.",
+                                },
                                 )
     first_name = models.CharField(max_length=settings.MAX_LENGTH_NAME,
-                                  verbose_name='First Name'
+                                  verbose_name='First Name',
+                                  validators=[validate_name_last_name]
                                   )
     last_name = models.CharField(max_length=settings.MAX_LENGTH_NAME,
-                                 verbose_name='Last Name'
+                                 verbose_name='Last Name',
+                                 validators=[validate_name_last_name]
                                  )
     avatar = models.ImageField(upload_to='users/avatars',
                                verbose_name='Фото профиля',
