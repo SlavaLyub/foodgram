@@ -1,7 +1,8 @@
 from base64 import b64decode
+# from drf_extra_fields.fields import Base64ImageField
+# Из коробки это решение не работает, не понимаю как применить
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 
@@ -9,14 +10,6 @@ from foodgram.models import (FavoriteRecipe, Ingredient, Recipe,
                              RecipeIngredient, ShoppingCart, Subscription, Tag)
 
 User = get_user_model()
-
-
-class UserCreateSerializer(BaseUserCreateSerializer):
-    class Meta(BaseUserCreateSerializer.Meta):
-        model = User
-        fields = ('id', 'email', 'username',
-                  'password', 'first_name', 'last_name'
-                  )
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -90,21 +83,10 @@ class SubList(serializers.ModelSerializer):
                 subscribed_to=obj.subscribed_to).exists())
 
     def get_recipes(self, obj):
-        recipes = Recipe.objects.filter(author=obj.subscribed_to)
-        recipes_limit = (
-            self.context['request'].query_params.get("recipes_limit")
+        serializer = RecipeListOrRetrieveSerializer(
+            many=True, context=self.context,
         )
-        if recipes_limit:
-            recipes = recipes[:int(recipes_limit)]
-        return [
-            {
-                "id": recipe.id,
-                "name": recipe.name,
-                "image": recipe.image.url,
-                "cooking_time": recipe.cooking_time,
-            }
-            for recipe in recipes
-        ]
+        return serializer.data
 
     def get_recipes_count(self, obj):
         return Recipe.objects.filter(author=obj.subscribed_to).count()
@@ -194,15 +176,6 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'slug']
 
 
-class IngredientSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(source="ingredient.name")
-    measurement_unit = serializers.CharField(source="ingredient.unit")
-
-    class Meta:
-        model = RecipeIngredient
-        fields = ["id", "name", "measurement_unit", "amount"]
-
-
 class GetOrRetriveIngredientSerializer(serializers.ModelSerializer):
     measurement_unit = serializers.CharField(source="unit")
 
@@ -214,7 +187,7 @@ class GetOrRetriveIngredientSerializer(serializers.ModelSerializer):
 class RecipeListOrRetrieveSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     author = UserSerializer(read_only=True)
-    ingredients = IngredientSerializer(many=True, read_only=True)
+    ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -237,6 +210,17 @@ class RecipeListOrRetrieveSerializer(serializers.ModelSerializer):
         if user.is_authenticated:
             return ShoppingCart.objects.filter(user=user, recipe=obj).exists()
         return False
+
+    def get_ingredients(self, obj):
+        return [
+            {
+                "id": ingredient.ingredient.id,
+                "name": ingredient.ingredient.name,
+                "measurement_unit": ingredient.ingredient.unit,
+                "amount": ingredient.amount,
+            }
+            for ingredient in obj.ingredients.all()
+        ]
 
 
 class IngredientCreateSerializer(serializers.ModelSerializer):
