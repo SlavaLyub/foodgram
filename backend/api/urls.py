@@ -5,10 +5,16 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from .serializers import UserSerializer
-from .views import (DownloadShoppingCartView, FavoriteView, IngredientViewSet,
-                    RecipeLinkView, RecipeViewSet, ShoppingCartView,
-                    SubscribeCreateDestroyView, SubscriptionsListView,
-                    TagViewSet, UserAvatarUpdateView)
+from .views import (FavoriteView,
+                    IngredientViewSet,
+                    RecipeLinkView,
+                    RecipeViewSet,
+                    ShoppingCartView,
+                    SubscribeCreateDestroyView,
+                    SubscriptionsListView,
+                    TagViewSet,
+                    UserAvatarUpdateView,
+                    )
 
 User = get_user_model()
 
@@ -19,7 +25,7 @@ ACTION = {
     'delete': 'destroy'
 }
 router = DefaultRouter()
-router.register('recipes', RecipeViewSet, basename='recipe')
+router.register(r'recipes', RecipeViewSet, basename='recipe')
 router.register(r'ingredients', IngredientViewSet, basename='ingredient')
 router.register(r'tags', TagViewSet, basename='tag')
 
@@ -27,9 +33,6 @@ urlpatterns = [
     path('recipes/<int:id>/favorite/',
          FavoriteView.as_view(ACTION),
          name='favorite'),
-    path('recipes/download_shopping_cart/',
-         DownloadShoppingCartView.as_view(),
-         name='download-shopping-cart'),
     path('recipes/<int:id>/shopping_cart/',
          ShoppingCartView.as_view(ACTION),
          name='shopping_cart'),
