@@ -1,12 +1,12 @@
 import re
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from .constants import constants
 
 
 def validate_name_last_name(value):
-    invalid_chars = re.findall(settings.PATTERN_NAME, value)
+    invalid_chars = re.findall(constants['PATTERN_NAME'], value)
     if invalid_chars:
         invalid_chars_str = ''.join(invalid_chars)
         raise ValidationError(

@@ -3,7 +3,7 @@ services:
 
   frontend:
     container_name: foodgram-front
-    build: ../frontend
+    build: frontend
     volumes:
       - ../frontend/:/app/result_build/
   nginx:

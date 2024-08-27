@@ -1,7 +1,6 @@
 import random
 import string
 
-from django.conf import settings
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -9,6 +8,7 @@ from django.db import models
 from django.db.models import Q, UniqueConstraint, CheckConstraint
 
 from .validators import validate_name_last_name
+from .constants import constants
 
 
 class User(AbstractUser):
@@ -16,12 +16,12 @@ class User(AbstractUser):
 
     email = models.EmailField(
         unique=True,
-        max_length=settings.MAX_LENGTH_EMAIL,
+        max_length=constants['MAX_LENGTH_NAME'],
         verbose_name='Электронная почта',
         help_text='Введите свой адрес электронной почты.'
     )
     username = models.CharField(
-        max_length=settings.MAX_LENGTH_NAME,
+        max_length=constants['MAX_LENGTH_NAME'],
         unique=True,
         verbose_name='Имя пользователя',
         validators=[username_validator],
@@ -31,13 +31,13 @@ class User(AbstractUser):
         help_text='Введите уникальное имя пользователя.'
     )
     first_name = models.CharField(
-        max_length=settings.MAX_LENGTH_NAME,
+        max_length=constants['MAX_LENGTH_NAME'],
         verbose_name='Имя',
         validators=[validate_name_last_name],
         help_text='Введите ваше имя.'
     )
     last_name = models.CharField(
-        max_length=settings.MAX_LENGTH_NAME,
+        max_length=constants['MAX_LENGTH_NAME'],
         verbose_name='Фамилия',
         validators=[validate_name_last_name],
         help_text='Введите вашу фамилию.'
@@ -97,13 +97,13 @@ class Subscription(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(
-        max_length=settings.MAX_LENGTH_UNIT,
+        max_length=constants['MAX_LENGTH_UNIT'],
         unique=True,
         verbose_name='Название тега',
         help_text='Введите название тега.'
     )
     slug = models.SlugField(
-        max_length=settings.MAX_LENGTH_UNIT,
+        max_length=constants['MAX_LENGTH_UNIT'],
         unique=True,
         verbose_name='Слаг',
         help_text='Слаг тега, используется в URL.'
@@ -119,13 +119,13 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(
-        max_length=settings.MAX_LENGTH_IAG,
+        max_length=constants['MAX_LENGTH_TAG'],
         unique=True,
         verbose_name='Название ингредиента',
         help_text='Введите название ингредиента.'
     )
     unit = models.CharField(
-        max_length=settings.MAX_LENGTH_UNIT,
+        max_length=constants['MAX_LENGTH_UNIT'],
         verbose_name='Единица измерения',
         help_text='Введите единицу измерения для ингредиента.'
     )
@@ -149,7 +149,7 @@ def generate_short_code():
 
     while True:
         short_code = ''.join(random.choices(characters,
-                                            k=settings.MAX_LENGTH_SHORT_URL
+                                            k=constants['MAX_LENGTH_SHORT_URL']
                                             ))
         if not Recipe.objects.filter(short_url=short_code).exists():
             return short_code
@@ -164,7 +164,7 @@ class Recipe(models.Model):
         help_text='Автор рецепта.'
     )
     name = models.CharField(
-        max_length=settings.MAX_LENGTH_IAG,
+        max_length=constants['MAX_LENGTH_TAG'],
         verbose_name='Название рецепта',
         help_text='Введите название рецепта.'
     )
@@ -193,7 +193,7 @@ class Recipe(models.Model):
         help_text='Дата и время создания рецепта.'
     )
     short_url = models.CharField(
-        max_length=settings.MAX_LENGTH_SHORT_URL,
+        max_length=constants['MAX_LENGTH_SHORT_URL'],
         unique=True,
         default=generate_short_code,
         verbose_name='Короткий URL',
