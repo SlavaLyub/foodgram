@@ -178,6 +178,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = GetOrRetriveIngredientSerializer
     filterset_class = IngredientFilter
+    # filter_backends = [filters.SearchFilter] Все настроено но не работает
+    # search_fields = '^name' не понимаю почему
     pagination_class = None
     permission_classes = [permissions.AllowAny]
 
