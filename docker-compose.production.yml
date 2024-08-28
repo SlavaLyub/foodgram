@@ -1,41 +1,48 @@
+version: '3'
+
 volumes:
-  foodgram_pg_data:
-  foodgram_static:
-  foodgram_media:
+  pg_data:
+  static_volume:
+  media_volume:
 
 services:
   db:
     image: postgres:13
     env_file: .env
     volumes:
-      - foodgram_pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
 
   backend:
-    container_name: foodgram-back
+    container_name: foodgram_backend
     image: slavalyub/foodgram_backend
     depends_on:
       - db
     env_file: .env
     volumes:
-      - ../data/:/prepared_data/
-      - foodgram_static:/backend_static/
-      - foodgram_media:/app/backend_media/
+      - static_volume:/backend_static/
+      - media_volume:/app/media
+    command: sh -c "
+        python manage.py migrate && \
+        gunicorn --bind 0.0.0.0:8000 backend.wsgi && \
+        python /app/manage.py collectstatic --noinput && \
+        cp -r /app/collected_static/. /backend_static/static/
+        "
 
   frontend:
-    container_name: foodgram-front
+    container_name: foodgram_frontend
     image: slavalyub/foodgram_frontend
-    command: cp -r /app/build/. /static/
+    command: sh -c "cp -r /app/build/. /static/"
     volumes:
-      - foodgram_static:/static/
+      - static_volume:/static
 
   gateway:
-    container_name: foodgram-proxy
+    container_name: foodgram_proxy
     image: slavalyub/foodgram_gateway
     depends_on:
       - backend
       - frontend
     ports:
-      - 8003:80
+      - 80:80
     volumes:
-      - foodgram_media:/media/
-      - foodgram_static:/static/
+      - media_volume:/media/
+      - static_volume:/static/

@@ -8,9 +8,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['foodgram.lyub4enko.ru', '*']
+ALLOWED_HOSTS = ['foodgram.lyub4enko.ru', '127.0.0.1', 'localhost',]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -127,7 +127,7 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {
-    'LOGIN_FIELD': 'email',
+    # 'LOGIN_FIELD': 'email',
     'SERIALIZERS': {
         'user': 'api.serializers.UserSerializer',
         'current_user': 'api.serializers.UserSerializer',
