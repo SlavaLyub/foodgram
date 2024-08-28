@@ -180,10 +180,13 @@ class RecipeLinkView(APIView):
             if not recipe.short_url:  # Если короткий URL не установлен
                 recipe.short_url = generate_short_code()
                 recipe.save()  # Сохраняем обновлённый рецепт с коротким URL
-            serializer = RecipeLinkSerializer(recipe, context={'request': request})
+            serializer = RecipeLinkSerializer(recipe,
+                                              context={'request': request}
+                                              )
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Recipe.DoesNotExist:
-            return Response({"detail": "Recipe not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Recipe not found."},
+                            status=status.HTTP_404_NOT_FOUND)
 
 
 def redirect_to_original(request, short_code):
