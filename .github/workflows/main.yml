@@ -74,6 +74,7 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v3
+
     - name: Copy docker-compose.production.yml via ssh
       uses: appleboy/scp-action@master
       with:
@@ -83,6 +84,17 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         source: "docker-compose.production.yml"
         target: "foodgram"
+
+    - name: Copy data files via ssh
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USER }}
+        key: ${{ secrets.SSH_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        source: "data/*"
+        target: "foodgram/data/"
+
     - name: Executing remote ssh commands to deploy
       uses: appleboy/ssh-action@master
       with:
@@ -102,6 +114,9 @@ jobs:
           sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
           sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
           sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
+          # Загружает данные в базу из CSV файлов
+          sudo docker compose -f docker-compose.production.yml exec backend python manage.py runscript load_ingredients --script-args data/ingredients.csv
+          sudo docker compose -f docker-compose.production.yml exec backend python manage.py runscript load_tags --script-args data/tags.csv
 
 
   send_message:
