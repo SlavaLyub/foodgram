@@ -1,4 +1,5 @@
 from base64 import b64decode
+
 # from drf_extra_fields.fields import Base64ImageField
 # Из коробки это решение не работает, не понимаю как применить
 from django.contrib.auth import get_user_model

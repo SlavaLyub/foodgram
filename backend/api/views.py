@@ -1,9 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
-from django.urls import reverse
 from django.shortcuts import redirect
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status, viewsets, permissions
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import (ListAPIView, RetrieveUpdateDestroyAPIView,
                                      ValidationError, get_object_or_404)
@@ -15,15 +15,14 @@ from rest_framework.viewsets import GenericViewSet
 from foodgram.models import (FavoriteRecipe, Ingredient, Recipe, ShoppingCart,
                              Subscription, Tag, generate_short_code)
 
+from .filters import IngredientFilter, RecipeFilterSet
+from .pagination import LimitPagination
+from .permission import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, FavoriteSerializer,
                           GetOrRetriveIngredientSerializer,
                           RecipeLinkSerializer, RecipeListOrRetrieveSerializer,
                           RecipePostOrPatchSerializer, ShoppingCartSerializer,
-                          SubList, SubscriptionSerializer,
-                          TagSerializer)
-from .filters import IngredientFilter, RecipeFilterSet
-from .pagination import LimitPagination
-from .permission import IsAuthorOrReadOnly
+                          SubList, SubscriptionSerializer, TagSerializer)
 
 User = get_user_model()
 

@@ -1,14 +1,14 @@
 import random
 import string
 
-from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, UniqueConstraint, CheckConstraint
+from django.db.models import CheckConstraint, Q, UniqueConstraint
 
-from .validators import validate_name_last_name
 from .constants import constants
+from .validators import validate_name_last_name
 
 
 class User(AbstractUser):
