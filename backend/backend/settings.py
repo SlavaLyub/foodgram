@@ -13,6 +13,10 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['foodgram.lyub4enko.ru', '127.0.0.1', 'localhost',]
 
+CORS_ALLOWED_ORIGINS = ALLOWED_HOSTS
+
+CSRF_TRUSTED_ORIGINS = ['https://foodgram.lyub4enko.ru', 'http://127.0.0.1', 'http://localhost',]
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
