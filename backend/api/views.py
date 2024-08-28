@@ -27,7 +27,9 @@ from .serializers import (AvatarSerializer, FavoriteSerializer,
 User = get_user_model()
 
 
-class BaseRecipeFavorAndShoppingView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
+class BaseRecipeFavorAndShoppingView(CreateModelMixin,
+                                     DestroyModelMixin,
+                                     GenericViewSet):
     model = None
     serializer_class = None
     error_message = "Рецепт не добавлен."
@@ -36,24 +38,31 @@ class BaseRecipeFavorAndShoppingView(CreateModelMixin, DestroyModelMixin, Generi
         recipe_id = self.kwargs.get('id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
 
-        if self.model.objects.filter(user=request.user, recipe=recipe).exists():
+        if self.model.objects.filter(user=request.user,
+                                     recipe=recipe).exists():
             return Response(
-                {'error': 'Recipe already in {}.'.format(self.model.__name__.lower())},
+                {'error': (
+                    'Recipe already in {}.'.format(self.model.__name__.lower())
+                )},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        serializer = self.get_serializer(data={'user': request.user.id, 'recipe': recipe.id})
+        serializer = self.get_serializer(data={'user': request.user.id,
+                                               'recipe': recipe.id})
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user, recipe=recipe)
 
         headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(
+            serializer.data, status=status.HTTP_201_CREATED, headers=headers
+        )
 
     def destroy(self, request, *args, **kwargs):
         recipe_id = self.kwargs.get('id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
 
-        instance = self.model.objects.filter(user=request.user, recipe=recipe).first()
+        instance = self.model.objects.filter(user=request.user,
+                                             recipe=recipe).first()
         if instance:
             instance.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
