@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
 from django.shortcuts import redirect
@@ -171,12 +173,10 @@ class RecipeLinkView(APIView):
 
 
 def redirect_to_original(request, short_code):
-    # Ищем рецепт по short_url
     recipe = get_object_or_404(Recipe, short_url=short_code)
-    # Перенаправляем на детальное представление рецепта
-    return redirect(reverse(
-        'api:recipe-detail', kwargs={'pk': recipe.id}
-    ))
+    host = request.get_host()
+    url = urljoin(f"{host}", f"{recipe.id}")
+    return redirect(reverse(url))
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
