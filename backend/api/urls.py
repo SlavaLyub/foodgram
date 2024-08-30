@@ -38,14 +38,16 @@ urlpatterns = [
                                  permission_classes=[IsAuthenticatedOrReadOnly]
                                  ),
          name='user_detail'),
-    path('users/subscriptions/', SubscriptionViewSet.as_view({'get': 'list_subscriptions'}), name='subscriptions'),
-    path('users/<int:pk>/subscribe/', SubscriptionViewSet.as_view({'post': 'subscribe', 'delete': 'unsubscribe'}), name='subscribe'),
-    # path('users/subscriptions/',
-    #      SubscriptionsListView.as_view(),
-    #      name='subscriptions'),
-    # path('users/<int:pk>/subscribe/',
-    #      SubscribeCreateDestroyView.as_view(ACTION),
-    #      name='subscribe'),
+    path('users/subscriptions/',
+         SubscriptionViewSet.as_view({'get': 'list_subscriptions'}),
+         name='subscriptions'
+         ),
+    path('users/<int:pk>/subscribe/',
+         SubscriptionViewSet.as_view(
+             {'post': 'subscribe', 'delete': 'unsubscribe'}
+         ),
+         name='subscribe'
+         ),
     path('', include('djoser.urls')),
     path('recipes/<int:id>/get-link/',
          RecipeLinkView.as_view(),
