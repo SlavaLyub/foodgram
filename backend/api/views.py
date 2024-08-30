@@ -5,19 +5,20 @@ from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import (ListAPIView, RetrieveUpdateDestroyAPIView,
+from rest_framework.generics import (RetrieveUpdateDestroyAPIView,
                                      ValidationError, get_object_or_404)
-from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
+from rest_framework.mixins import (CreateModelMixin, DestroyModelMixin,
+                                   ListModelMixin)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from foodgram.models import (FavoriteRecipe, Ingredient, Recipe, ShoppingCart,
-                             Subscription, Tag, generate_short_code)
+                             Subscription, Tag)
 
-from .filters import IngredientFilter, RecipeFilterSet
+from .filters import RecipeFilterSet
 from .pagination import LimitPagination
-from .permission import IsAuthorOrReadOnly
+from .permission import IsAuthenticatedOrAuthorOrReadOnly
 from .serializers import (AvatarSerializer, FavoriteSerializer,
                           GetOrRetriveIngredientSerializer,
                           RecipeLinkSerializer, RecipeListOrRetrieveSerializer,
@@ -38,20 +39,11 @@ class BaseRecipeFavorAndShoppingView(CreateModelMixin,
         recipe_id = self.kwargs.get('id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
 
-        if self.model.objects.filter(user=request.user,
-                                     recipe=recipe).exists():
-            return Response(
-                {'error': (
-                    'Recipe already in {}.'.format(self.model.__name__.lower())
-                )},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        serializer = self.get_serializer(data={'user': request.user.id,
-                                               'recipe': recipe.id})
+        serializer = self.get_serializer(
+            data={'user': request.user.id, 'recipe': recipe.id}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user, recipe=recipe)
-
         headers = self.get_success_headers(serializer.data)
         return Response(
             serializer.data, status=status.HTTP_201_CREATED, headers=headers
@@ -77,7 +69,7 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
     serializer_class = AvatarSerializer
 
     def get_object(self):
-        return get_object_or_404(User, pk=self.request.user.id)
+        return self.request.user
 
     def patch(self, request, *args, **kwargs):
         user = self.get_object()
@@ -85,16 +77,15 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
                                          data=request.data,
                                          partial=True
                                          )
-        if serializer.is_valid():
-            serializer.save()
-            return Response({'status': 'Avatar updated'},
-                            status=status.HTTP_200_OK
-                            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exceptions=True)
+        serializer.save()
+        return Response({'status': 'Avatar updated'},
+                        status=status.HTTP_200_OK
+                        )
 
     def delete(self, request, *args, **kwargs):
         try:
-            user: User = get_object_or_404(User, pk=self.request.user.id)
+            user: User = self.request.user
             user.avatar = None
             user.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -102,66 +93,55 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SubscriptionsListView(ListAPIView):
-    serializer_class = SubList
+class SubscriptionViewSet(viewsets.GenericViewSet, ListModelMixin):
     pagination_class = LimitPagination
 
     def get_queryset(self):
         user = self.request.user
-        subscriptions = Subscription.objects.filter(user=user)
-        return (
-            subscriptions if
-            subscriptions.exists() else
-            Subscription.objects.none()
-        )
+        return Subscription.objects.filter(user=user)
 
+    @action(detail=False,
+            methods=['get'],
+            url_path='subscriptions',
+            url_name='subscriptions'
+            )
+    def list_subscriptions(self, request):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = SubList(page, many=True, context={'request': request})
+            return self.get_paginated_response(serializer.data)
 
-class SubscribeCreateDestroyView(
-    CreateModelMixin, DestroyModelMixin, GenericViewSet
-):
-    serializer_class = SubscriptionSerializer
+        serializer = SubList(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
-    def get_object(self):
-        pk = self.kwargs.get("pk")
+    @action(detail=True,
+            methods=['post'],
+            url_path='subscribe',
+            url_name='subscribe'
+            )
+    def subscribe(self, request, pk=None):
         subscribed_to = get_object_or_404(User, pk=pk)
-        return get_object_or_404(
-            Subscription, user=self.request.user, subscribed_to=subscribed_to
-        )
-
-    def perform_create(self, serializer):
-        serializer.save()
-
-    def create(self, request, *args, **kwargs):
-        pk = self.kwargs.get("pk")
-        subscribed_to = get_object_or_404(User, pk=pk)
-        serializer = self.get_serializer(
-            data={"subscribed_to": subscribed_to.id,
-                  "user": request.user.id}
+        serializer = SubscriptionSerializer(
+            data={"subscribed_to": subscribed_to.id, "user": request.user.id},
+            context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
+
         try:
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
+            serializer.save()
             return Response(serializer.data,
-                            status=status.HTTP_201_CREATED,
-                            headers=headers
-                            )
+                            status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({"errors": str(e)},
-                            status=status.HTTP_400_BAD_REQUEST
-                            )
+                            status=status.HTTP_400_BAD_REQUEST)
 
-    def destroy(self, request, *args, **kwargs):
+    @subscribe.mapping.delete
+    def unsubscribe(self, request, pk=None):
         user = request.user
-        subscribed_to_id = kwargs.get('pk')
-        try:
-            author = User.objects.get(pk=subscribed_to_id)
-        except User.DoesNotExist:
-            return Response({'error': 'Author not found.'},
-                            status=status.HTTP_404_NOT_FOUND
-                            )
+        subscribed_to = get_object_or_404(User, pk=pk)
         subscription = Subscription.objects.filter(user=user,
-                                                   subscribed_to=author
+                                                   subscribed_to=subscribed_to
                                                    ).first()
         if not subscription:
             return Response({'error': 'Subscription does not exist.'},
@@ -177,31 +157,33 @@ class RecipeLinkView(APIView):
     def get(self, request, id):
         try:
             recipe = Recipe.objects.get(pk=id)
-            if not recipe.short_url:  # Если короткий URL не установлен
-                recipe.short_url = generate_short_code()
-                recipe.save()  # Сохраняем обновлённый рецепт с коротким URL
+            if not recipe.short_url:
+                recipe.short_url = recipe.generate_short_url()
+                recipe.save(update_fields=['short_url'])
             serializer = RecipeLinkSerializer(recipe,
-                                              context={'request': request}
-                                              )
+                                              context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Recipe.DoesNotExist:
-            return Response({"detail": "Recipe not found."},
-                            status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Recipe not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 def redirect_to_original(request, short_code):
     # Ищем рецепт по short_url
     recipe = get_object_or_404(Recipe, short_url=short_code)
     # Перенаправляем на детальное представление рецепта
-    return redirect(reverse('api:recipe-detail', kwargs={'pk': recipe.id}))
+    return redirect(reverse(
+        'api:recipe-detail', kwargs={'pk': recipe.id}
+    ))
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = GetOrRetriveIngredientSerializer
-    filterset_class = IngredientFilter
-    # filter_backends = [filters.SearchFilter] Все настроено но не работает
-    # search_fields = '^name' не понимаю почему
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['^name']
     pagination_class = None
     permission_classes = [permissions.AllowAny]
 
@@ -230,7 +212,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_fields = ['author', 'tags',
                         'is_favorited', 'is_in_shopping_cart']
     pagination_class = LimitPagination
-    permission_classes = [IsAuthorOrReadOnly, ]
+    permission_classes = [IsAuthenticatedOrAuthorOrReadOnly, ]
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:

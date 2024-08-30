@@ -1,6 +1,7 @@
 import django_filters
+from django_filters.rest_framework import BooleanFilter
 
-from foodgram.models import Ingredient, Recipe, Tag, User
+from foodgram.models import Recipe, Tag, User
 
 
 class RecipeFilterSet(django_filters.FilterSet):
@@ -13,10 +14,10 @@ class RecipeFilterSet(django_filters.FilterSet):
     author = django_filters.ModelChoiceFilter(
         queryset=User.objects.all()
     )
-    is_favorited = django_filters.CharFilter(
+    is_favorited = BooleanFilter(
         method='filter_is_favorited'
     )
-    is_in_shopping_cart = django_filters.CharFilter(
+    is_in_shopping_cart = BooleanFilter(
         method='filter_is_in_shopping_cart'
     )
 
@@ -26,7 +27,7 @@ class RecipeFilterSet(django_filters.FilterSet):
 
     def filter_is_favorited(self, queryset, name, value):
         user = self.request.user
-        if user and user.is_authenticated and value:
+        if user.is_authenticated and value:
             return queryset.filter(favorited_by__user=user).distinct()
         return queryset
 
@@ -35,13 +36,3 @@ class RecipeFilterSet(django_filters.FilterSet):
         if user and user.is_authenticated and value:
             return queryset.filter(shopping_cart_by__user=user).distinct()
         return queryset
-
-
-class IngredientFilter(django_filters.rest_framework.FilterSet):
-    name = django_filters.rest_framework.CharFilter(field_name='name',
-                                                    lookup_expr='startswith'
-                                                    )
-
-    class Meta:
-        model = Ingredient
-        fields = ['name']

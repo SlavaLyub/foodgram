@@ -1,14 +1,16 @@
 import random
-import string
 
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import CheckConstraint, Q, UniqueConstraint
+from django.utils.text import slugify
 
-from .constants import constants
-from .validators import validate_name_last_name
+from .constants import (ERROR_MESSAGE, MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
+                        MAX_LENGTH_SHORT_URL, MAX_LENGTH_TAG, MAX_LENGTH_UNIT,
+                        NAME_RECIPE_PATTERN, NAMES_ALLOW_PATTERN,
+                        TAG_ALLOW_PATTERN, USERNAME_RESTRICT_PATTERN)
 
 
 class User(AbstractUser):
@@ -16,30 +18,45 @@ class User(AbstractUser):
 
     email = models.EmailField(
         unique=True,
-        max_length=constants['MAX_LENGTH_NAME'],
+        max_length=MAX_LENGTH_EMAIL,
         verbose_name='Электронная почта',
         help_text='Введите свой адрес электронной почты.'
     )
     username = models.CharField(
-        max_length=constants['MAX_LENGTH_NAME'],
+        max_length=MAX_LENGTH_NAME,
         unique=True,
         verbose_name='Имя пользователя',
-        validators=[username_validator],
+        validators=[
+            RegexValidator(
+                regex=USERNAME_RESTRICT_PATTERN,
+                message=f'{ERROR_MESSAGE}',
+            )
+        ],
         error_messages={
             'unique': "Пользователь с таким именем уже существует.",
         },
         help_text='Введите уникальное имя пользователя.'
     )
     first_name = models.CharField(
-        max_length=constants['MAX_LENGTH_NAME'],
+        max_length=MAX_LENGTH_NAME,
         verbose_name='Имя',
-        validators=[validate_name_last_name],
+        validators=[
+            RegexValidator(
+                regex=NAMES_ALLOW_PATTERN,
+                message=f'{ERROR_MESSAGE}',
+            )
+        ],
         help_text='Введите ваше имя.'
     )
     last_name = models.CharField(
-        max_length=constants['MAX_LENGTH_NAME'],
+        max_length=MAX_LENGTH_NAME,
         verbose_name='Фамилия',
-        validators=[validate_name_last_name],
+        validators=[
+            RegexValidator(
+                regex=NAMES_ALLOW_PATTERN,
+                message=f'{ERROR_MESSAGE}',
+            )
+        ],
         help_text='Введите вашу фамилию.'
     )
     avatar = models.ImageField(
@@ -50,8 +67,8 @@ class User(AbstractUser):
         help_text='Загрузите фото профиля.'
     )
 
-    # USERNAME_FIELD = 'email'
-    # REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -97,13 +114,19 @@ class Subscription(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(
-        max_length=constants['MAX_LENGTH_UNIT'],
+        max_length=MAX_LENGTH_UNIT,
         unique=True,
+        validators=[
+            RegexValidator(
+                regex=TAG_ALLOW_PATTERN,
+                message=f'{ERROR_MESSAGE}',
+            )
+        ],
         verbose_name='Название тега',
         help_text='Введите название тега.'
     )
     slug = models.SlugField(
-        max_length=constants['MAX_LENGTH_UNIT'],
+        max_length=MAX_LENGTH_UNIT,
         unique=True,
         verbose_name='Слаг',
         help_text='Слаг тега, используется в URL.'
@@ -119,13 +142,19 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(
-        max_length=constants['MAX_LENGTH_TAG'],
+        max_length=MAX_LENGTH_TAG,
         unique=True,
+        validators=[
+            RegexValidator(
+                regex=NAME_RECIPE_PATTERN,
+                message=f'{ERROR_MESSAGE}',
+            )
+        ],
         verbose_name='Название ингредиента',
         help_text='Введите название ингредиента.'
     )
     unit = models.CharField(
-        max_length=constants['MAX_LENGTH_UNIT'],
+        max_length=MAX_LENGTH_UNIT,
         verbose_name='Единица измерения',
         help_text='Введите единицу измерения для ингредиента.'
     )
@@ -144,17 +173,6 @@ class Ingredient(models.Model):
         return self.name
 
 
-def generate_short_code():
-    characters = string.ascii_letters + string.digits
-
-    while True:
-        short_code = ''.join(random.choices(characters,
-                                            k=constants['MAX_LENGTH_SHORT_URL']
-                                            ))
-        if not Recipe.objects.filter(short_url=short_code).exists():
-            return short_code
-
-
 class Recipe(models.Model):
     author = models.ForeignKey(
         User,
@@ -164,7 +182,13 @@ class Recipe(models.Model):
         help_text='Автор рецепта.'
     )
     name = models.CharField(
-        max_length=constants['MAX_LENGTH_TAG'],
+        max_length=MAX_LENGTH_TAG,
+        validators=[
+            RegexValidator(
+                regex=NAME_RECIPE_PATTERN,
+                message=f'{ERROR_MESSAGE}',
+            )
+        ],
         verbose_name='Название рецепта',
         help_text='Введите название рецепта.'
     )
@@ -193,28 +217,41 @@ class Recipe(models.Model):
         help_text='Дата и время создания рецепта.'
     )
     short_url = models.CharField(
-        max_length=constants['MAX_LENGTH_SHORT_URL'],
+        max_length=MAX_LENGTH_SHORT_URL,
         unique=True,
-        default=generate_short_code,
         verbose_name='Короткий URL',
-        help_text='Короткий URL для рецепта.'
+        help_text='Короткий URL для рецепта.',
+        blank=True
     )
 
     class Meta:
-        unique_together = ('author', 'name')
+        constraints = [
+            UniqueConstraint(
+                fields=['author', 'name'],
+                name='unique_author_name_recipe'
+            ),
+        ]
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
         ordering = ['-date_created']
 
+    def save(self, *args, **kwargs):
+        if not self.short_url:
+            self.short_url = self.generate_short_url()
+        super().save(*args, **kwargs)
+
+    def generate_short_url(self):
+        short_url = slugify(
+            f"{self.id}-{self.name[:MAX_LENGTH_SHORT_URL]}")
+        while Recipe.objects.filter(short_url=short_url).exists():
+            short_url = slugify(
+                f"{self.id}-{self.name[:MAX_LENGTH_SHORT_URL]}-"
+                f"{random.randint(0, MAX_LENGTH_TAG)}"
+            )
+        return short_url
+
     def __str__(self):
         return self.name
-
-    def clean(self):
-        if Recipe.objects.filter(
-                short_url=self.short_url).exclude(pk=self.pk).exists():
-            raise ValidationError(
-                "URL уже используется. Пожалуйста, сгенерируйте новый."
-            )
 
 
 class RecipeIngredient(models.Model):
@@ -228,7 +265,7 @@ class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        related_name='recipe_ingredients',
+        related_name='recipe_ingredients+',
         verbose_name='Ингредиент',
         help_text='Ингредиент, используемый в рецепте.'
     )
@@ -238,7 +275,12 @@ class RecipeIngredient(models.Model):
     )
 
     class Meta:
-        unique_together = ('recipe', 'ingredient')
+        constraints = [
+            UniqueConstraint(
+                fields=['recipe', 'ingredient'],
+                name='unique_recipe_ingredient'
+            )
+        ]
         verbose_name = 'Ингредиент рецепта'
         verbose_name_plural = 'Ингредиенты рецептов'
 
@@ -249,7 +291,18 @@ class RecipeIngredient(models.Model):
         )
 
 
-class FavoriteRecipe(models.Model):
+class AddRecipeAbstractModel(models.Model):
+    added_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата добавления',
+        help_text='Дата и время, когда рецепт был добавлен в избранное.'
+    )
+
+    class Meta:
+        abstract = True
+
+
+class FavoriteRecipe(AddRecipeAbstractModel):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -264,27 +317,20 @@ class FavoriteRecipe(models.Model):
         verbose_name='Рецепт',
         help_text='Рецепт, который был добавлен в избранное.'
     )
-    added_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Дата добавления',
-        help_text='Дата и время, когда рецепт был добавлен в избранное.'
-    )
-
-    class Meta:
-        constraints = [
-            UniqueConstraint(
-                fields=['user', 'recipe'],
-                name='unique_favorite_recipes'
-            ),
-        ]
-        verbose_name = 'Избранный рецепт'
-        verbose_name_plural = 'Избранные рецепты'
-
-    def __str__(self):
-        return f'{self.user.username} -> {self.recipe.name}'
 
 
-class ShoppingCart(models.Model):
+class Meta:
+    constraints = [
+        UniqueConstraint(
+            fields=['user', 'recipe'],
+            name='unique_favorite_recipes'
+        ),
+    ]
+    verbose_name = 'Избранный рецепт'
+    verbose_name_plural = 'Избранные рецепты'
+
+
+class ShoppingCart(AddRecipeAbstractModel):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -298,11 +344,6 @@ class ShoppingCart(models.Model):
         related_name='shopping_cart_by',
         verbose_name='Рецепт',
         help_text='Рецепт, который был добавлен в корзину покупок.'
-    )
-    added_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Дата добавления',
-        help_text='Дата и время, когда рецепт был добавлен в корзину покупок.'
     )
 
     class Meta:

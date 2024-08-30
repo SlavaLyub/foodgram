@@ -1,7 +1,5 @@
 from base64 import b64decode
 
-# from drf_extra_fields.fields import Base64ImageField
-# Из коробки это решение не работает, не понимаю как применить
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from rest_framework import serializers
@@ -9,6 +7,9 @@ from rest_framework.serializers import ValidationError
 
 from foodgram.models import (FavoriteRecipe, Ingredient, Recipe,
                              RecipeIngredient, ShoppingCart, Subscription, Tag)
+
+# from drf_extra_fields.fields import Base64ImageField
+# Из коробки это решение не работает, не понимаю как применить
 
 User = get_user_model()
 
@@ -394,6 +395,13 @@ class FavoriteSerializer(serializers.ModelSerializer):
         model = FavoriteRecipe
         fields = ['user', 'recipe']
 
+    def create(self, validated_data):
+        user = validated_data['user']
+        recipe = validated_data['recipe']
+        if FavoriteRecipe.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError('Recipe already in favorites.')
+        return FavoriteRecipe.objects.create(user=user, recipe=recipe)
+
     def to_representation(self, instance):
         recipe = instance.recipe
         return {
@@ -413,3 +421,14 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShoppingCart
         fields = ['id', 'image', 'name', 'cooking_time']
+
+    def create(self, validated_data):
+        user = validated_data['user']
+        recipe = validated_data['recipe']
+
+        if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError(
+                'Recipe already in shopping cart.'
+            )
+
+        return ShoppingCart.objects.create(user=user, recipe=recipe)

@@ -5,10 +5,10 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.routers import DefaultRouter
 
 from .serializers import UserSerializer
-from .views import (FavoriteView, IngredientViewSet, RecipeLinkView,
-                    RecipeViewSet, ShoppingCartView,
-                    SubscribeCreateDestroyView, SubscriptionsListView,
-                    TagViewSet, UserAvatarUpdateView)
+from .views import (
+    FavoriteView, IngredientViewSet, RecipeLinkView, RecipeViewSet,
+    ShoppingCartView, SubscriptionViewSet, TagViewSet, UserAvatarUpdateView
+)
 
 User = get_user_model()
 
@@ -19,7 +19,7 @@ ACTION = {
     'delete': 'destroy'
 }
 router = DefaultRouter()
-router.register(r'recipes', RecipeViewSet, basename='recipe')
+router.register('recipes', RecipeViewSet, basename='recipe')
 router.register(r'ingredients', IngredientViewSet, basename='ingredient')
 router.register(r'tags', TagViewSet, basename='tag')
 
@@ -38,12 +38,14 @@ urlpatterns = [
                                  permission_classes=[IsAuthenticatedOrReadOnly]
                                  ),
          name='user_detail'),
-    path('users/subscriptions/',
-         SubscriptionsListView.as_view(),
-         name='subscriptions'),
-    path('users/<int:pk>/subscribe/',
-         SubscribeCreateDestroyView.as_view(ACTION),
-         name='subscribe'),
+    path('users/subscriptions/', SubscriptionViewSet.as_view({'get': 'list_subscriptions'}), name='subscriptions'),
+    path('users/<int:pk>/subscribe/', SubscriptionViewSet.as_view({'post': 'subscribe', 'delete': 'unsubscribe'}), name='subscribe'),
+    # path('users/subscriptions/',
+    #      SubscriptionsListView.as_view(),
+    #      name='subscriptions'),
+    # path('users/<int:pk>/subscribe/',
+    #      SubscribeCreateDestroyView.as_view(ACTION),
+    #      name='subscribe'),
     path('', include('djoser.urls')),
     path('recipes/<int:id>/get-link/',
          RecipeLinkView.as_view(),
