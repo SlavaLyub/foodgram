@@ -209,8 +209,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = RecipeFilterSet
-    filterset_fields = ['author', 'tags',
-                        'is_favorited', 'is_in_shopping_cart']
     pagination_class = LimitPagination
     permission_classes = [IsAuthenticatedOrAuthorOrReadOnly, ]
 
@@ -251,5 +249,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         response = FileResponse(content, content_type='text/plain')
         response[
-            'Content-Disposition'] = 'attachment; filename="shopping_cart.txt"'
+            'Content-Disposition'
+        ] = 'attachment; filename="shopping_cart.txt"'
         return response
