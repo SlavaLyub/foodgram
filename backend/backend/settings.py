@@ -11,11 +11,11 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['foodgram.lyub4enko.ru', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['foodgram.lyub4enko.ru', '127.0.0.1', 'localhost', 'yagram.lyub4enko.ru']
 
 CORS_ALLOWED_ORIGINS = ALLOWED_HOSTS
 
-CSRF_TRUSTED_ORIGINS = ['https://foodgram.lyub4enko.ru', 'http://127.0.0.1', 'http://localhost']
+CSRF_TRUSTED_ORIGINS = ['https://foodgram.lyub4enko.ru', 'http://127.0.0.1', 'http://localhost', 'https://yagram.lyub4enko.ru']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
