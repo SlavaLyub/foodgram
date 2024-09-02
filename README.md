@@ -81,7 +81,7 @@
    - Разработчик: Любченко Вячеслав
    - Контактная информация: v.lyub4enko@mail.ru
 7. **Адрес Проекта**
-   - https://foodgram.lyub4enko.ru #Сервис временно не доступен
+   - https://foodgram.lyub4enko.ru i_cloud
    - https://yagram.lyubchenko.ru Я.Облако
 8. **Доступ в админ зону**
    - ```I_cloud```
