@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['foodgram.lyub4enko.ru', '127.0.0.1', 'localhost', 'yagram.lyub4enko.ru']
+ALLOWED_HOSTS = ['foodgram.lyub4enko.ru', '127.0.0.1', 'localhost', 'yagram.lyub4enko.ru',]
 
 CORS_ALLOWED_ORIGINS = ALLOWED_HOSTS
 

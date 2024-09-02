@@ -61,11 +61,11 @@
    ```
 2. **Запуск проекта локально с помощью Docker Compose:**
     ```bash
-   sudo docker-compose up --build
+   sudo docker compose up --build
     ```
 3. **Миграции базы данных**
     ```
-    docker-compose exec web python manage.py migrate
+    docker compose exec backend python manage.py migrate
    ```
 4. **Создание суперпользователя:**
     ```
