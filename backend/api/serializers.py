@@ -1,13 +1,10 @@
 from django.contrib.auth import get_user_model
+from drf_base64.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 
 from foodgram.models import (FavoriteRecipe, Ingredient, Recipe,
                              RecipeIngredient, ShoppingCart, Subscription, Tag)
-
-from drf_base64.fields import Base64ImageField
-# from drf_extra_fields.fields import Base64ImageField
-# Из коробки это решение не работает, не понимаю как применить
 
 User = get_user_model()
 

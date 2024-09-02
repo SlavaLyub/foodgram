@@ -5,10 +5,9 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.routers import DefaultRouter
 
 from .serializers import UserSerializer
-from .views import (
-    FavoriteView, IngredientViewSet, RecipeLinkView, RecipeViewSet,
-    ShoppingCartView, SubscriptionViewSet, TagViewSet, UserAvatarUpdateView
-)
+from .views import (FavoriteView, IngredientViewSet, RecipeLinkView,
+                    RecipeViewSet, ShoppingCartView, SubscriptionViewSet,
+                    TagViewSet, UserAvatarUpdateView)
 
 User = get_user_model()
 
