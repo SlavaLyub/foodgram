@@ -82,14 +82,7 @@
    - Контактная информация: v.lyub4enko@mail.ru
 7. **Адрес Проекта**
    - https://foodgram.lyub4enko.ru i_cloud
-   - https://yagram.lyubchenko.ru Я.Облако
 8. **Доступ в админ зону**
    - ```I_cloud```
    - Логин: ```test```
    - Пароль: ```123```
-   - ```Я.Облако```
-   - Эл. Почта: ```admin@mail.ru```
-   - Имя пользователя: ```admin```
-   - Имя: ```admin```
-   - Фамилия: ```admin```
-   - Password: ```123```
