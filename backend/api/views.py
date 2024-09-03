@@ -1,9 +1,6 @@
-from urllib.parse import urljoin
-
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
 from django.shortcuts import redirect
-from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
