@@ -1,16 +1,16 @@
-import random
 from random import choices
+
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import CheckConstraint, Q, UniqueConstraint
-from django.utils.text import slugify
 
-from .constants import (ERROR_MESSAGE, MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
+from .constants import (CHAR_SELECT, ERROR_MESSAGE, MAX_ATTEMPTS,
+                        MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
                         MAX_LENGTH_SHORT_URL, MAX_LENGTH_TAG, MAX_LENGTH_UNIT,
                         NAME_RECIPE_PATTERN, NAMES_ALLOW_PATTERN,
-                        TAG_ALLOW_PATTERN, USERNAME_RESTRICT_PATTERN, CHAR_SELECT)
+                        TAG_ALLOW_PATTERN, USERNAME_RESTRICT_PATTERN)
 
 
 class User(AbstractUser):
@@ -235,17 +235,10 @@ class Recipe(models.Model):
         verbose_name_plural = 'Рецепты'
         ordering = ['-date_created']
 
-    # def save(self, *args, **kwargs):
-    #     if not self.short_url:
-    #         self.short_url = self.generate_short_url()
-    #     if not self.pk:
-    #         return super().save(*args, **kwargs)
-    #     return super().save(*args, **kwargs)
-    #
     @staticmethod
     def generate_short_url():
-        for _ in range(20):
-            short = ''.join(choices(CHAR_SELECT, k=6))
+        for _ in range(MAX_ATTEMPTS):
+            short = ''.join(choices(CHAR_SELECT, k=MAX_LENGTH_SHORT_URL))
             if not Recipe.objects.filter(short_url=short).exists():
                 return short
 

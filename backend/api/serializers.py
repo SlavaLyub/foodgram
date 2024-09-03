@@ -1,6 +1,7 @@
-from django.contrib.auth import get_user_model
 # from drf_base64.fields import Base64ImageField
 from base64 import b64decode
+
+from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError

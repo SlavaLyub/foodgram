@@ -12,6 +12,7 @@ TAG_ALLOW_PATTERN = r'[a-zA-Zа-яА-ЯёЁ\s\-]'
 NAME_RECIPE_PATTERN = r'[a-zA-Zа-яА-ЯёЁ\s\-\(\)]'
 ERROR_MESSAGE = 'The field contains invalid characters.'
 
+MAX_ATTEMPTS = 20
 MAX_LENGTH_TITLE = 255
 MAX_LENGTH_TAG = 100
 MAX_LENGTH_UNIT = 50
