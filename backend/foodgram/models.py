@@ -236,8 +236,12 @@ class Recipe(models.Model):
         ordering = ['-date_created']
 
     def save(self, *args, **kwargs):
+        if not self.pk:
+            super().save(*args, **kwargs)
+
         if not self.short_url:
             self.short_url = self.generate_short_url()
+
         super().save(*args, **kwargs)
 
     def generate_short_url(self):
