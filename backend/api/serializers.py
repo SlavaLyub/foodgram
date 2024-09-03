@@ -1,5 +1,5 @@
+import uuid
 from base64 import b64decode
-from curses.ascii import isdigit
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -35,7 +35,8 @@ class Base64ImageField(serializers.ImageField):
         if isinstance(data, str) and data.startswith('data:image'):
             format, imgstr = data.split(';base64,')
             ext = format.split('/')[-1]
-            data = ContentFile(b64decode(imgstr), name='temp.' + ext)
+            unique_filename = f'{uuid.uuid4()}.{ext}'
+            data = ContentFile(b64decode(imgstr), name=unique_filename)
         return super().to_internal_value(data)
 
 

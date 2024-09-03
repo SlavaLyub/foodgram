@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count
+from django.forms.models import BaseInlineFormSet
 
 from .models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
                      ShoppingCart, Subscription, Tag, User)
@@ -19,13 +21,27 @@ class SubscriptionAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'subscribed_to__username')
 
 
+class RecipeIngredientInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        if not any(
+                form.cleaned_data for form in self.forms
+                if form.cleaned_data and not form.cleaned_data.get(
+                    'DELETE', False
+                )):
+            raise ValidationError(
+                "A recipe must have at least one ingredient."
+            )
+
+
 class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
-    extra = 1  # Количество пустых форм для добавления новых ингредиентов
-    min_num = 1  # Минимальное количество ингредиентов
-    max_num = 10  # Максимальное количество ингредиентов
-    verbose_name = "Ингредиент"
-    verbose_name_plural = "Ингредиенты"
+    formset = RecipeIngredientInlineFormSet
+    extra = 1
+    min_num = 1
+    validate_min = True
 
 
 @admin.register(Recipe)
@@ -37,11 +53,6 @@ class RecipeAdmin(admin.ModelAdmin):
     filter_horizontal = ('tags',)
     inlines = [RecipeIngredientInline]
 
-    def save_model(self, request, obj, form, change):
-        if not obj.ingredients.exists():
-            raise ValidationError('Нельзя сохранить рецепт без ингредиентов.')
-        super().save_model(request, obj, form, change)
-
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         qs = qs.annotate(_times_favorited=Count('favorited_by'))
@@ -49,7 +60,26 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def times_favorited(self, obj):
         return obj._times_favorited
+
     times_favorited.short_description = 'Times Favorited'
+
+    @transaction.atomic
+    def save_formset(self, request, form, formset, change):
+        if isinstance(formset, RecipeIngredientInlineFormSet):
+            formset.clean()
+            formset.instance = form.instance
+            formset.save()
+
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        inline_instances = self.get_inline_instances(request)
+        for inline in inline_instances:
+            formset = inline.get_formset(request, obj=obj)
+            if isinstance(formset, RecipeIngredientInlineFormSet):
+                formset.instance = obj
+                formset.clean()
+                formset.save()
 
 
 @admin.register(Tag)
