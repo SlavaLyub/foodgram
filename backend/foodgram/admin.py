@@ -1,8 +1,8 @@
 from django.contrib import admin
-from django.db.models import Count
 from django.core.exceptions import ValidationError
+from django.db.models import Count
 
-from .models import (FavoriteRecipe, Ingredient, Recipe,
+from .models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
                      ShoppingCart, Subscription, Tag, User)
 
 
@@ -19,6 +19,15 @@ class SubscriptionAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'subscribed_to__username')
 
 
+class RecipeIngredientInline(admin.TabularInline):
+    model = RecipeIngredient
+    extra = 1  # Количество пустых форм для добавления новых ингредиентов
+    min_num = 1  # Минимальное количество ингредиентов
+    max_num = 10  # Максимальное количество ингредиентов
+    verbose_name = "Ингредиент"
+    verbose_name_plural = "Ингредиенты"
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'author', 'cooking_time', 'times_favorited')
@@ -26,6 +35,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_filter = ('tags', 'author')
     raw_id_fields = ('author',)
     filter_horizontal = ('tags',)
+    inlines = [RecipeIngredientInline]
 
     def save_model(self, request, obj, form, change):
         if not obj.ingredients.exists():

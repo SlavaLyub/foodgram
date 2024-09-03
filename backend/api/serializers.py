@@ -1,4 +1,5 @@
 from base64 import b64decode
+from curses.ascii import isdigit
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -88,6 +89,10 @@ class SubList(serializers.ModelSerializer):
             self.context['request'].query_params.get("recipes_limit")
         )
         if recipes_limit:
+            if not recipes_limit.isnumeric():
+                raise ValidationError(
+                    {"recipes_limit": "Invalid recipes_limit parameter."}
+                )
             recipes = recipes[:int(recipes_limit)]
         return [
             {
@@ -98,6 +103,7 @@ class SubList(serializers.ModelSerializer):
             }
             for recipe in recipes
         ]
+
 
     def get_recipes_count(self, obj):
         return Recipe.objects.filter(author=obj.subscribed_to).count()
