@@ -1,5 +1,5 @@
 import random
-
+from random import choices
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import RegexValidator
@@ -10,7 +10,7 @@ from django.utils.text import slugify
 from .constants import (ERROR_MESSAGE, MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
                         MAX_LENGTH_SHORT_URL, MAX_LENGTH_TAG, MAX_LENGTH_UNIT,
                         NAME_RECIPE_PATTERN, NAMES_ALLOW_PATTERN,
-                        TAG_ALLOW_PATTERN, USERNAME_RESTRICT_PATTERN)
+                        TAG_ALLOW_PATTERN, USERNAME_RESTRICT_PATTERN, CHAR_SELECT)
 
 
 class User(AbstractUser):
@@ -30,7 +30,6 @@ class User(AbstractUser):
             RegexValidator(
                 regex=USERNAME_RESTRICT_PATTERN,
                 message=f'{ERROR_MESSAGE}',
-                inverse_match=False
             )
         ],
         error_messages={
@@ -219,10 +218,10 @@ class Recipe(models.Model):
     )
     short_url = models.CharField(
         max_length=MAX_LENGTH_SHORT_URL,
-        unique=True,
         verbose_name='Короткий URL',
         help_text='Короткий URL для рецепта.',
-        blank=True
+        blank=True,
+        null=True,
     )
 
     class Meta:
@@ -236,22 +235,19 @@ class Recipe(models.Model):
         verbose_name_plural = 'Рецепты'
         ordering = ['-date_created']
 
-    def save(self, *args, **kwargs):
-        if not self.short_url:
-            self.short_url = self.generate_short_url()
-        if not self.pk:
-            return super().save(*args, **kwargs)
-        return super().save(*args, **kwargs)
-
-    def generate_short_url(self):
-        short_url = slugify(
-            f"{self.id}-{self.name[:MAX_LENGTH_SHORT_URL]}")
-        while Recipe.objects.filter(short_url=short_url).exists():
-            short_url = slugify(
-                f"{self.id}-{self.name[:MAX_LENGTH_SHORT_URL]}-"
-                f"{random.randint(0, MAX_LENGTH_TAG)}"
-            )
-        return short_url
+    # def save(self, *args, **kwargs):
+    #     if not self.short_url:
+    #         self.short_url = self.generate_short_url()
+    #     if not self.pk:
+    #         return super().save(*args, **kwargs)
+    #     return super().save(*args, **kwargs)
+    #
+    @staticmethod
+    def generate_short_url():
+        for _ in range(20):
+            short = ''.join(choices(CHAR_SELECT, k=6))
+            if not Recipe.objects.filter(short_url=short).exists():
+                return short
 
     def __str__(self):
         return self.name

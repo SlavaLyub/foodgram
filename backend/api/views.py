@@ -157,8 +157,8 @@ class RecipeLinkView(APIView):
         try:
             recipe = Recipe.objects.get(pk=id)
             if not recipe.short_url:
-                recipe.short_url = recipe.generate_short_url()
-                recipe.save(update_fields=['short_url'])
+                recipe.short_url = Recipe.generate_short_url()
+                recipe.save()
             serializer = RecipeLinkSerializer(recipe,
                                               context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)

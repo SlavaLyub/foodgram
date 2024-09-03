@@ -6,7 +6,7 @@ MAX_LENGTH_EMAIL = 254
 MAX_LENGTH_PASSWORD = 128
 PAGINATION_LIMIT = 10
 
-USERNAME_RESTRICT_PATTERN = r'[^\@\$\%\^\&\#\:\;!]'
+USERNAME_RESTRICT_PATTERN = r'[\w.@+-]'
 NAMES_ALLOW_PATTERN = r'[a-zA-Zа-яА-ЯёЁ\-]'
 TAG_ALLOW_PATTERN = r'[a-zA-Zа-яА-ЯёЁ\s\-]'
 NAME_RECIPE_PATTERN = r'[a-zA-Zа-яА-ЯёЁ\s\-\(\)]'
