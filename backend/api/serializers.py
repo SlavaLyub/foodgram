@@ -105,7 +105,6 @@ class SubList(serializers.ModelSerializer):
             for recipe in recipes
         ]
 
-
     def get_recipes_count(self, obj):
         return Recipe.objects.filter(author=obj.subscribed_to).count()
 
