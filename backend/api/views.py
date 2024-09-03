@@ -171,7 +171,7 @@ class RecipeLinkView(APIView):
 
 def redirect_to_original(request, short_code):
     recipe = get_object_or_404(Recipe, short_url=short_code)
-    return redirect('recipe-detail', pk=recipe.id)
+    return redirect('recipe-detail', id=recipe.id)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
