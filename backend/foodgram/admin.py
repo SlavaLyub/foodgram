@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.db.models import Count
+from django.core.exceptions import ValidationError
 
-from .models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
+from .models import (FavoriteRecipe, Ingredient, Recipe,
                      ShoppingCart, Subscription, Tag, User)
 
 
@@ -26,6 +27,11 @@ class RecipeAdmin(admin.ModelAdmin):
     raw_id_fields = ('author',)
     filter_horizontal = ('tags',)
 
+    def save_model(self, request, obj, form, change):
+        if not obj.ingredients.exists():
+            raise ValidationError('Нельзя сохранить рецепт без ингредиентов.')
+        super().save_model(request, obj, form, change)
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         qs = qs.annotate(_times_favorited=Count('favorited_by'))
@@ -46,13 +52,6 @@ class TagAdmin(admin.ModelAdmin):
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'unit')
     search_fields = ('name',)
-
-
-@admin.register(RecipeIngredient)
-class RecipeIngredientAdmin(admin.ModelAdmin):
-    list_display = ('id', 'recipe', 'ingredient', 'amount')
-    search_fields = ('recipe__name', 'ingredient__name')
-    raw_id_fields = ('recipe', 'ingredient')
 
 
 @admin.register(FavoriteRecipe)

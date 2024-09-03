@@ -1,4 +1,3 @@
-# from drf_base64.fields import Base64ImageField
 from base64 import b64decode
 
 from django.contrib.auth import get_user_model
@@ -53,6 +52,7 @@ class AvatarSerializer(serializers.ModelSerializer):
 
 
 class SubList(serializers.ModelSerializer):
+    id = serializers.ReadOnlyField(source="subscribed_to.id")
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
@@ -83,10 +83,21 @@ class SubList(serializers.ModelSerializer):
                 subscribed_to=obj.subscribed_to).exists())
 
     def get_recipes(self, obj):
-        serializer = RecipeListOrRetrieveSerializer(
-            many=True, context=self.context,
+        recipes = obj.subscribed_to.recipes.all()
+        recipes_limit = (
+            self.context['request'].query_params.get("recipes_limit")
         )
-        return serializer.data
+        if recipes_limit:
+            recipes = recipes[:int(recipes_limit)]
+        return [
+            {
+                "id": recipe.id,
+                "name": recipe.name,
+                "image": recipe.image.url,
+                "cooking_time": recipe.cooking_time,
+            }
+            for recipe in recipes
+        ]
 
     def get_recipes_count(self, obj):
         return Recipe.objects.filter(author=obj.subscribed_to).count()
