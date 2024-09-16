@@ -1,9 +1,9 @@
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
-from django.utils.html import format_html
 from django.db.models import Count
 from django.forms.models import BaseInlineFormSet
+from django.utils.html import format_html
 
 from .models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
                      ShoppingCart, Subscription, Tag, User)
