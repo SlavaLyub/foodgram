@@ -5,6 +5,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import CheckConstraint, Q, UniqueConstraint
+from django.utils.html import format_html
 
 from .constants import (CHAR_SELECT, ERROR_MESSAGE, MAX_ATTEMPTS,
                         MAX_LENGTH_EMAIL, MAX_LENGTH_NAME,
@@ -241,6 +242,14 @@ class Recipe(models.Model):
             short = ''.join(choices(CHAR_SELECT, k=MAX_LENGTH_SHORT_URL))
             if not Recipe.objects.filter(short_url=short).exists():
                 return short
+
+    def image_display(self):
+        if self.image:
+            return format_html('<img src="{}" width="100" height="100" />',
+                               self.image.url)
+        return 'Нет изображения'
+
+    image_display.short_description = 'Изображение'
 
     def __str__(self):
         return self.name
