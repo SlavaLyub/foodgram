@@ -1,6 +1,7 @@
+from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.utils.html import format_html
 from django.db.models import Count
 from django.forms.models import BaseInlineFormSet
 
@@ -44,9 +45,40 @@ class RecipeIngredientInline(admin.TabularInline):
     validate_min = True
 
 
+class ImageWidget(forms.ClearableFileInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.attrs['class'] = 'vTextField'
+
+    def render(self, name, value, attrs=None, renderer=None):
+        html = super().render(name, value, attrs, renderer)
+        if value and hasattr(value, 'url'):
+            html = format_html(
+                '<div>'
+                '<img src="{}" width="100" height="100" /><br>'
+                '{}'
+                '</div>',
+                value.url,
+                html
+            )
+        return html
+
+
+class RecipeForm(forms.ModelForm):
+    class Meta:
+        model = Recipe
+        fields = '__all__'
+        widgets = {
+            'image': ImageWidget()
+        }
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'author', 'cooking_time', 'times_favorited')
+    form = RecipeForm
+    list_display = ('id', 'name',
+                    'image_tag',
+                    'author', 'cooking_time', 'times_favorited')
     search_fields = ('name', 'author__username')
     list_filter = ('tags', 'author')
     raw_id_fields = ('author',)
@@ -62,6 +94,15 @@ class RecipeAdmin(admin.ModelAdmin):
         return obj._times_favorited
 
     times_favorited.short_description = 'Times Favorited'
+
+    def image_tag(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="50" height="50" />',
+                               obj.image.url
+                               )
+        return '-'
+
+    image_tag.short_description = 'Изображение'
 
 
 @admin.register(Tag)
