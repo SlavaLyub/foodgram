@@ -3,7 +3,6 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count
 from django.forms.models import BaseInlineFormSet
-from django.utils.html import format_html
 
 from .models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
                      ShoppingCart, Subscription, Tag, User)
@@ -47,10 +46,7 @@ class RecipeIngredientInline(admin.TabularInline):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'author',
-                    'cooking_time', 'times_favorited',
-                    'image_tag'
-                    )
+    list_display = ('id', 'name', 'author', 'cooking_time', 'times_favorited')
     search_fields = ('name', 'author__username')
     list_filter = ('tags', 'author')
     raw_id_fields = ('author',)
@@ -66,14 +62,6 @@ class RecipeAdmin(admin.ModelAdmin):
         return obj._times_favorited
 
     times_favorited.short_description = 'Times Favorited'
-
-    def image_tag(self, obj):
-        if obj.image:
-            return format_html('<img src="{}" width="100" height="100" />',
-                               obj.image.url)
-        return '-'
-
-    image_tag.short_description = 'Image'
 
     @transaction.atomic
     def save_formset(self, request, form, formset, change):
