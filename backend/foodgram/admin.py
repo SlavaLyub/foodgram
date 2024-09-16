@@ -63,24 +63,6 @@ class RecipeAdmin(admin.ModelAdmin):
 
     times_favorited.short_description = 'Times Favorited'
 
-    @transaction.atomic
-    def save_formset(self, request, form, formset, change):
-        if isinstance(formset, RecipeIngredientInlineFormSet):
-            formset.clean()
-            formset.instance = form.instance
-            formset.save()
-
-    @transaction.atomic
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        inline_instances = self.get_inline_instances(request)
-        for inline in inline_instances:
-            formset = inline.get_formset(request, obj=obj)
-            if isinstance(formset, RecipeIngredientInlineFormSet):
-                formset.instance = obj
-                formset.clean()
-                formset.save()
-
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
